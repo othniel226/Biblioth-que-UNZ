@@ -1,4 +1,4 @@
-# Daily Scrum — Dimanche 25 Mai 2026
+# Daily Scrum - Dimanche 25 Mai 2026
 
 ## Binôme Frontend Daouda THIOMBIANO 
 - Fait : Frontend complet
