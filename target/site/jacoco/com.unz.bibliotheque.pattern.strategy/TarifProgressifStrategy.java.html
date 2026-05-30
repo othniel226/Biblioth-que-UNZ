@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TarifProgressifStrategy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.pattern.strategy</a> &gt; <span class="el_source">TarifProgressifStrategy.java</span></div><h1>TarifProgressifStrategy.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.pattern.strategy;
+
+import com.unz.bibliotheque.model.Emprunt;
+import org.springframework.stereotype.Component;
+import java.math.BigDecimal;
+
+/**
+ * Implémentation du Pattern Strategy : tarif progressif (croissant).
+ *
+ * Le tarif augmente par palier selon le nombre de jours de retard :
+ *   - Jours  1 à  7 : 100 FCFA/jour
+ *   - Jours  8 à 14 : 150 FCFA/jour (×1.5)
+ *   - Jours 15+     : 200 FCFA/jour (×2.0)
+ *
+ * Cette stratégie encourage les étudiants à rendre rapidement les ouvrages.
+ * Elle peut être activée par l'administrateur via ConfigurationSysteme.
+ */
+@Component(&quot;tarifProgressif&quot;)
+<span class="fc" id="L19">public class TarifProgressifStrategy implements PenaliteStrategy {</span>
+
+    /** Tarif de base pour les 7 premiers jours */
+    private static final int TARIF_BASE = 100;
+
+    /** Tarif intermédiaire (jours 8 à 14) */
+    private static final int TARIF_INTERMEDIAIRE = 150;
+
+    /** Tarif maximum (au-delà de 14 jours) */
+    private static final int TARIF_MAXIMUM = 200;
+
+    /**
+     * {@inheritDoc}
+     *
+     * Calcule la pénalité avec un tarif progressif par palier.
+     */
+    @Override
+    public BigDecimal calculer(Emprunt emprunt) {
+<span class="fc" id="L37">        long jours = emprunt.getNombreJoursRetard();</span>
+<span class="fc bfc" id="L38" title="All 2 branches covered.">        if (jours &lt;= 0) {</span>
+<span class="fc" id="L39">            return BigDecimal.ZERO;</span>
+        }
+
+<span class="fc" id="L42">        long montant = 0;</span>
+
+        // Palier 1 : jours 1 à 7
+<span class="fc" id="L45">        long palier1 = Math.min(jours, 7);</span>
+<span class="fc" id="L46">        montant += palier1 * TARIF_BASE;</span>
+
+        // Palier 2 : jours 8 à 14
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        if (jours &gt; 7) {</span>
+<span class="fc" id="L50">            long palier2 = Math.min(jours - 7, 7);</span>
+<span class="fc" id="L51">            montant += palier2 * TARIF_INTERMEDIAIRE;</span>
+        }
+
+        // Palier 3 : jours 15 et plus
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (jours &gt; 14) {</span>
+<span class="fc" id="L56">            long palier3 = jours - 14;</span>
+<span class="fc" id="L57">            montant += palier3 * TARIF_MAXIMUM;</span>
+        }
+
+<span class="fc" id="L60">        return BigDecimal.valueOf(montant);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDescription() {
+<span class="fc" id="L68">        return &quot;Tarif progressif — 100/150/200 FCFA/jour selon les paliers&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

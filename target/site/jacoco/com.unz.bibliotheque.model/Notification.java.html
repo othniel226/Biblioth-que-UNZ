@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Notification.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">Notification.java</span></div><h1>Notification.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import com.unz.bibliotheque.model.enums.TypeNotification;
+import jakarta.persistence.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+/**
+ * Entité représentant une notification envoyée à un utilisateur.
+ * Les notifications sont envoyées par email via le Service de notification.
+ *
+ * Générées par le Pattern Observer lors d'événements métier :
+ *   - Création d'emprunt → CONFIRMATION_EMPRUNT
+ *   - J-3 avant retour → RAPPEL_RETOUR
+ *   - Retard détecté → ALERTE_RETARD
+ *   - Réservation disponible → RESERVATION_DISPO
+ */
+@Entity
+@Table(name = &quot;notifications&quot;)
+<span class="pc" id="L20">@Getter @Setter @NoArgsConstructor @AllArgsConstructor</span>
+public class Notification {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L25">    private Long id;</span>
+
+    /** Utilisateur destinataire de la notification */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;destinataire_id&quot;, nullable = false)
+<span class="nc" id="L30">    private Utilisateur destinataire;</span>
+
+    /** Type de notification (détermine le template email utilisé) */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 30)
+<span class="nc" id="L35">    private TypeNotification type;</span>
+
+    /** Sujet de l'email envoyé */
+    @Column(nullable = false, length = 200)
+<span class="nc" id="L39">    private String sujet;</span>
+
+    /** Corps du message (texte ou HTML) */
+    @Column(columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L43">    private String message;</span>
+
+    /** Indique si la notification a été lue dans l'interface */
+<span class="pc" id="L46">    @Column(nullable = false)</span>
+<span class="pc" id="L47">    private Boolean lu = false;</span>
+
+    /** Date et heure d'envoi de la notification */
+<span class="pc" id="L50">    @Column(nullable = false)</span>
+<span class="pc" id="L51">    private LocalDateTime dateEnvoi = LocalDateTime.now();</span>
+
+    /**
+     * Marque la notification comme lue.
+     */
+    public void marquerLu() {
+<span class="nc" id="L57">        this.lu = true;</span>
+<span class="nc" id="L58">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

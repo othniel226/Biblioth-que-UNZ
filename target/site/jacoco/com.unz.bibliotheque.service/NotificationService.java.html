@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>NotificationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.service</a> &gt; <span class="el_source">NotificationService.java</span></div><h1>NotificationService.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.service;
+
+import com.unz.bibliotheque.event.EmpruntCreeEvent;
+import com.unz.bibliotheque.event.EmpruntProlongeEvent;
+import com.unz.bibliotheque.event.ExemplaireRetourneEvent;
+import com.unz.bibliotheque.model.*;
+import com.unz.bibliotheque.model.enums.TypeNotification;
+import com.unz.bibliotheque.repository.NotificationRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Service de gestion des notifications par email.
+ *
+ * Design Pattern : Observer (Pattern Observer via @EventListener de Spring).
+ * Ce service écoute les événements publiés par EmpruntService et
+ * envoie les emails correspondants de manière asynchrone (@Async).
+ *
+ * Avantage du découplage Observer :
+ *   EmpruntService publie un événement → NotificationService l'écoute
+ *   EmpruntService ne dépend PAS de NotificationService (couplage minimal).
+ */
+@Service
+<span class="fc" id="L30">@RequiredArgsConstructor</span>
+<span class="fc" id="L31">@Slf4j</span>
+public class NotificationService {
+
+    private final JavaMailSender mailSender;
+    private final NotificationRepository notifRepo;
+
+    // ══════════════════════════════════════════════════════
+    // LISTENERS — Pattern Observer
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Écoute l'événement EmpruntCreeEvent et envoie un email de confirmation.
+     * Exécuté de manière asynchrone pour ne pas bloquer la requête principale.
+     *
+     * @param event événement de création d'emprunt
+     */
+    @EventListener
+    @Async
+    public void onEmpruntCree(EmpruntCreeEvent event) {
+<span class="fc" id="L50">        Emprunt emprunt = event.getEmprunt();</span>
+<span class="fc" id="L51">        envoyerConfirmationEmprunt(emprunt);</span>
+<span class="fc" id="L52">    }</span>
+
+    /**
+     * Écoute l'événement ExemplaireRetourneEvent et envoie l'email de retour.
+     *
+     * @param event événement de retour d'exemplaire
+     */
+    @EventListener
+    @Async
+    public void onExemplaireRetourne(ExemplaireRetourneEvent event) {
+<span class="fc" id="L62">        Emprunt emprunt = event.getEmprunt();</span>
+<span class="fc" id="L63">        envoyerConfirmationRetour(emprunt);</span>
+<span class="fc" id="L64">    }</span>
+
+    /**
+     * Écoute l'événement EmpruntProlongeEvent et envoie l'email de prolongation.
+     *
+     * @param event événement de prolongation d'emprunt
+     */
+    @EventListener
+    @Async
+    public void onEmpruntProlonge(EmpruntProlongeEvent event) {
+<span class="fc" id="L74">        Emprunt emprunt = event.getEmprunt();</span>
+<span class="fc" id="L75">        envoyerConfirmationProlongation(emprunt);</span>
+<span class="fc" id="L76">    }</span>
+
+    // ══════════════════════════════════════════════════════
+    // MÉTHODES D'ENVOI D'EMAILS
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Envoie un email de confirmation lors de la création d'un emprunt.
+     *
+     * @param emprunt l'emprunt nouvellement créé
+     */
+    @Transactional
+    public void envoyerConfirmationEmprunt(Emprunt emprunt) {
+<span class="fc" id="L89">        String sujet = &quot;Confirmation d'emprunt — &quot; + emprunt.getExemplaire().getOuvrage().getTitre();</span>
+<span class="fc" id="L90">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nVotre emprunt a été enregistré avec succès.%n&quot; +
+            &quot;Ouvrage : %s%nDate de retour prévue : %s%n%n&quot; +
+            &quot;Merci de respecter la date de retour.%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L94">            emprunt.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L95">            emprunt.getExemplaire().getOuvrage().getTitre(),</span>
+<span class="fc" id="L96">            emprunt.getDateRetourPrevu()</span>
+        );
+<span class="fc" id="L98">        envoyerEmail(emprunt.getEtudiant(), TypeNotification.CONFIRMATION_EMPRUNT, sujet, message);</span>
+<span class="fc" id="L99">    }</span>
+
+    /**
+     * Envoie un email de confirmation de retour avec le montant de pénalité.
+     *
+     * @param emprunt l'emprunt rendu
+     */
+    @Transactional
+    public void envoyerConfirmationRetour(Emprunt emprunt) {
+<span class="fc" id="L108">        String sujet = &quot;Retour enregistré — &quot; + emprunt.getExemplaire().getOuvrage().getTitre();</span>
+<span class="pc bpc" id="L109" title="1 of 2 branches missed.">        String pénalité = emprunt.getPenalite() != null</span>
+<span class="nc" id="L110">            ? &quot;\nPénalité de retard : &quot; + emprunt.getPenalite().getMontant() + &quot; FCFA&quot;</span>
+<span class="fc" id="L111">            : &quot;&quot;;</span>
+<span class="fc" id="L112">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nLe retour de l'ouvrage '%s' a été enregistré.%s%n%nMerci.%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L114">            emprunt.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L115">            emprunt.getExemplaire().getOuvrage().getTitre(),</span>
+            pénalité
+        );
+<span class="fc" id="L118">        envoyerEmail(emprunt.getEtudiant(), TypeNotification.CONFIRMATION_EMPRUNT, sujet, message);</span>
+<span class="fc" id="L119">    }</span>
+
+    /**
+     * Envoie un email de rappel avant la date de retour.
+     * Appelé par le scheduler RappelRetourScheduler.
+     *
+     * @param emprunt emprunt dont le retour approche
+     */
+    @Transactional
+    public void envoyerRappelRetour(Emprunt emprunt) {
+<span class="fc" id="L129">        String sujet = &quot;Rappel : retour à prévoir — &quot; + emprunt.getExemplaire().getOuvrage().getTitre();</span>
+<span class="fc" id="L130">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nRappel : l'ouvrage '%s' doit être retourné le %s.%n&quot; +
+            &quot;Merci de le ramener à temps pour éviter des pénalités.%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L133">            emprunt.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L134">            emprunt.getExemplaire().getOuvrage().getTitre(),</span>
+<span class="fc" id="L135">            emprunt.getDateRetourPrevu()</span>
+        );
+<span class="fc" id="L137">        envoyerEmail(emprunt.getEtudiant(), TypeNotification.RAPPEL_RETOUR, sujet, message);</span>
+<span class="fc" id="L138">    }</span>
+
+    /**
+     * Envoie une alerte de retard avec le montant de pénalité.
+     * Appelé par le scheduler VerificationRetardScheduler.
+     *
+     * @param emprunt emprunt en retard
+     */
+    @Transactional
+    public void envoyerAlerteRetard(Emprunt emprunt) {
+<span class="fc" id="L148">        String sujet = &quot;URGENT : retard de retour — &quot; + emprunt.getExemplaire().getOuvrage().getTitre();</span>
+<span class="fc" id="L149">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nATTENTION : L'ouvrage '%s' aurait dû être retourné le %s.%n&quot; +
+            &quot;Vous êtes en retard de %d jour(s).%n&quot; +
+            &quot;Pénalité en cours : 100 FCFA/jour.%n%n&quot; +
+            &quot;Veuillez retourner l'ouvrage dès que possible.%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L154">            emprunt.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L155">            emprunt.getExemplaire().getOuvrage().getTitre(),</span>
+<span class="fc" id="L156">            emprunt.getDateRetourPrevu(),</span>
+<span class="fc" id="L157">            emprunt.getNombreJoursRetard()</span>
+        );
+<span class="fc" id="L159">        envoyerEmail(emprunt.getEtudiant(), TypeNotification.ALERTE_RETARD, sujet, message);</span>
+<span class="fc" id="L160">    }</span>
+
+    /**
+     * Notifie un étudiant que sa réservation est disponible.
+     *
+     * @param reservation la réservation confirmée
+     */
+    @Transactional
+    public void envoyerDisponibiliteReservation(Reservation reservation) {
+<span class="fc" id="L169">        String sujet = &quot;Votre réservation est disponible — &quot; + reservation.getOuvrage().getTitre();</span>
+<span class="fc" id="L170">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nBonne nouvelle ! L'ouvrage '%s' que vous avez réservé est maintenant disponible.%n&quot; +
+            &quot;Vous avez 48 heures pour venir le récupérer à la bibliothèque.%n%n&quot; +
+            &quot;Passé ce délai, votre réservation sera annulée.%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L174">            reservation.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L175">            reservation.getOuvrage().getTitre()</span>
+        );
+<span class="fc" id="L177">        envoyerEmail(reservation.getEtudiant(), TypeNotification.RESERVATION_DISPO, sujet, message);</span>
+<span class="fc" id="L178">    }</span>
+
+    /**
+     * Envoie un email de confirmation de prolongation.
+     *
+     * @param emprunt l'emprunt prolongé
+     */
+    @Transactional
+    public void envoyerConfirmationProlongation(Emprunt emprunt) {
+<span class="fc" id="L187">        String sujet = &quot;Prolongation accordée — &quot; + emprunt.getExemplaire().getOuvrage().getTitre();</span>
+<span class="fc" id="L188">        String message = String.format(</span>
+            &quot;Bonjour %s,%n%nVotre prolongation a été accordée.%n&quot; +
+            &quot;Nouvelle date de retour : %s%n%nBibliothèque UNZ&quot;,
+<span class="fc" id="L191">            emprunt.getEtudiant().getNomComplet(),</span>
+<span class="fc" id="L192">            emprunt.getDateRetourPrevu()</span>
+        );
+<span class="fc" id="L194">        envoyerEmail(emprunt.getEtudiant(), TypeNotification.PROLONGATION_ACCORD, sujet, message);</span>
+<span class="fc" id="L195">    }</span>
+
+    // ══════════════════════════════════════════════════════
+    // MÉTHODE INTERNE
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Envoie un email et sauvegarde la notification en base de données.
+     *
+     * @param destinataire utilisateur destinataire
+     * @param type         type de notification
+     * @param sujet        sujet de l'email
+     * @param message      corps du message
+     */
+    private void envoyerEmail(Utilisateur destinataire, TypeNotification type,
+                              String sujet, String message) {
+        try {
+            // Envoi de l'email via JavaMailSender
+<span class="fc" id="L213">            SimpleMailMessage email = new SimpleMailMessage();</span>
+<span class="fc" id="L214">            email.setTo(destinataire.getEmail());</span>
+<span class="fc" id="L215">            email.setSubject(&quot;[Bibliothèque UNZ] &quot; + sujet);</span>
+<span class="fc" id="L216">            email.setText(message);</span>
+<span class="fc" id="L217">            email.setFrom(&quot;bibliotheque.unz@gmail.com&quot;);</span>
+<span class="fc" id="L218">            mailSender.send(email);</span>
+<span class="fc" id="L219">            log.info(&quot;Email envoyé à {} : {}&quot;, destinataire.getEmail(), sujet);</span>
+<span class="nc" id="L220">        } catch (Exception e) {</span>
+            // L'envoi d'email ne doit jamais bloquer l'opération principale
+<span class="nc" id="L222">            log.error(&quot;Échec d'envoi d'email à {} : {}&quot;, destinataire.getEmail(), e.getMessage());</span>
+<span class="fc" id="L223">        }</span>
+
+        // Sauvegarde de la notification en base (pour l'historique in-app)
+<span class="fc" id="L226">        Notification notif = new Notification();</span>
+<span class="fc" id="L227">        notif.setDestinataire(destinataire);</span>
+<span class="fc" id="L228">        notif.setType(type);</span>
+<span class="fc" id="L229">        notif.setSujet(sujet);</span>
+<span class="fc" id="L230">        notif.setMessage(message);</span>
+<span class="fc" id="L231">        notifRepo.save(notif);</span>
+<span class="fc" id="L232">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

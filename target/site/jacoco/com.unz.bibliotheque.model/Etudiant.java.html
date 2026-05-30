@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Etudiant.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">Etudiant.java</span></div><h1>Etudiant.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Entité représentant un étudiant de l'Université Norbert Zongo.
+ * Hérite de {@link Utilisateur} avec la stratégie JOINED.
+ *
+ * Un étudiant peut :
+ *   - emprunter jusqu'à 3 ouvrages simultanément
+ *   - réserver des ouvrages indisponibles (file FIFO)
+ *   - consulter son historique d'emprunts
+ *   - demander une prolongation (une seule fois par emprunt)
+ */
+@Entity
+@Table(name = &quot;etudiants&quot;)
+@Getter
+<span class="pc" id="L22">@Setter</span>
+<span class="fc" id="L23">@NoArgsConstructor</span>
+<span class="nc" id="L24">@AllArgsConstructor</span>
+public class Etudiant extends Utilisateur {
+
+    /** Matricule universitaire unique de l'étudiant (ex: 2023INF001) */
+    @NotBlank(message = &quot;Le matricule est obligatoire&quot;)
+    @Column(nullable = false, unique = true, length = 20)
+<span class="nc" id="L30">    private String matricule;</span>
+
+    /** Filière d'étude (ex: Informatique, Mathématiques, Physique) */
+    @NotBlank(message = &quot;La filière est obligatoire&quot;)
+    @Column(nullable = false, length = 100)
+<span class="nc" id="L35">    private String filiere;</span>
+
+    /** Niveau académique (ex: L1, L2, L3, M1, M2) */
+    @NotBlank(message = &quot;Le niveau est obligatoire&quot;)
+    @Column(nullable = false, length = 10)
+<span class="nc" id="L40">    private String niveau;</span>
+
+    /**
+     * Liste de tous les emprunts de cet étudiant.
+     * Relation bidirectionnelle mappée par le champ &quot;etudiant&quot; dans Emprunt.
+     */
+<span class="pc" id="L46">    @OneToMany(mappedBy = &quot;etudiant&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)</span>
+<span class="nc" id="L47">    private List&lt;Emprunt&gt; emprunts = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Liste de toutes les réservations de cet étudiant.
+     */
+<span class="pc" id="L52">    @OneToMany(mappedBy = &quot;etudiant&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)</span>
+<span class="nc" id="L53">    private List&lt;Reservation&gt; reservations = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Retourne le nombre d'emprunts actifs (EN_COURS ou EN_RETARD ou PROLONGE).
+     * Utilisé pour vérifier le quota (max 3 emprunts simultanés).
+     *
+     * @return nombre d'emprunts en cours
+     */
+    public long getNombreEmpruntsActifs() {
+<span class="nc" id="L62">        return emprunts.stream()</span>
+<span class="nc bnc" id="L63" title="All 4 branches missed.">            .filter(e -&gt; e.getStatut() != null &amp;&amp; e.getStatut().name().equals(&quot;RENDU&quot;) == false)</span>
+<span class="nc" id="L64">            .count();</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

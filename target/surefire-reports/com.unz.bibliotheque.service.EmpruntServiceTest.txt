@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.unz.bibliotheque.service.EmpruntServiceTest
+-------------------------------------------------------------------------------
+Tests run: 12, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.483 s -- in com.unz.bibliotheque.service.EmpruntServiceTest

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des emprunts — Bibliothécaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; }
+        .navbar { background: linear-gradient(135deg,#0d47a1,#1565c0) !important; }
+        .table-card { border-radius: 12px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .badge-retard { background-color: #ffebee; color: #c62828; font-size: 11px; padding: 4px 10px; border-radius: 20px; }
+        .badge-encours { background-color: #e3f2fd; color: #1565c0; font-size: 11px; padding: 4px 10px; border-radius: 20px; }
+        .badge-rendu { background-color: #e8f5e9; color: #2e7d32; font-size: 11px; padding: 4px 10px; border-radius: 20px; }
+    </style>
+</head>
+<body>
+<<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="container">
+        <span class="navbar-brand fw-bold"><i class="fas fa-book-open me-2"></i>Bibliothèque UNZ — Bibliothécaire</span>
+        <div class="d-flex gap-2">
+            <a href="/bibliothecaire/tableau-de-bord" class="btn btn-outline-light btn-sm"><i class="fas fa-tachometer-alt me-1"></i>Tableau de bord</a>
+            <a th:href="@{/auth/logout}" class="btn btn-outline-light btn-sm"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0"><i class="fas fa-exchange-alt me-2 text-primary"></i>Gestion des emprunts</h4>
+        <a href="/bibliothecaire/emprunts/nouveau" class="btn btn-success btn-sm">
+            <i class="fas fa-plus-circle me-1"></i>Nouvel emprunt
+        </a>
+    </div>
+
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="fas fa-check-circle me-2"></i><span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="card table-card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="small text-muted">Rechercher</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                        <input type="text" name="q" class="form-control" placeholder="Étudiant, ouvrage, code-barres..." th:value="${q}">
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Statut</label>
+                    <select name="statut" class="form-select">
+                        <option value="">Tous les statuts</option>
+                        <option value="EN_COURS" th:selected="${statut == 'EN_COURS'}">En cours</option>
+                        <option value="EN_RETARD" th:selected="${statut == 'EN_RETARD'}">En retard</option>
+                        <option value="RENDU" th:selected="${statut == 'RENDU'}">Rendu</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Date retour</label>
+                    <input type="date" name="dateRetour" class="form-control" th:value="${dateRetour}">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100"><i class="fas fa-filter me-1"></i>Filtrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card table-card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="ps-4">ID</th>
+                            <th>Étudiant</th>
+                            <th>Ouvrage</th>
+                            <th>Code-barres</th>
+                            <th>Date emprunt</th>
+                            <th>Retour prévu</th>
+                            <th>Statut</th>
+                            <th class="text-end pe-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${emprunts == null or emprunts.content == null or #lists.isEmpty(emprunts.content)}">
+                            <td colspan="8" class="text-center text-muted py-5">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block opacity-25"></i>
+                                Aucun emprunt trouvé.
+                            </td>
+                        </tr>
+                        <tr th:each="emp : ${emprunts.content}">
+                            <td class="ps-4 fw-500 small" th:text="${emp.id}"></td>
+                            <td>
+                                <div class="fw-500 small" th:text="${emp.etudiant != null ? emp.etudiant.nomComplet : '—'}"></div>
+                                <div class="text-muted" style="font-size:11px;" th:text="${emp.etudiant != null ? emp.etudiant.matricule : ''}"></div>
+                            </td>
+                            <td>
+                                <div class="fw-500 small" th:text="${emp.exemplaire != null and emp.exemplaire.ouvrage != null ? emp.exemplaire.ouvrage.titre : '—'}"></div>
+                                <div class="text-muted" style="font-size:11px;" th:text="${emp.exemplaire != null and emp.exemplaire.ouvrage != null ? emp.exemplaire.ouvrage.auteur : ''}"></div>
+                            </td>
+                            <td class="small font-monospace text-muted" th:text="${emp.exemplaire != null ? emp.exemplaire.codeBarres : '—'}"></td>
+                            <td class="small" th:text="${emp.dateEmprunt}"></td>
+                            <td class="small" th:text="${emp.dateRetourPrevu}"></td>
+                            <td>
+                                <span th:if="${emp.statut != null and emp.statut.name() == 'EN_COURS'}" class="badge-encours">En cours</span>
+                                <span th:if="${emp.statut != null and emp.statut.name() == 'EN_RETARD'}" class="badge-retard"><i class="fas fa-exclamation-circle me-1"></i>En retard</span>
+                                <span th:if="${emp.statut != null and emp.statut.name() == 'RENDU'}" class="badge-rendu"><i class="fas fa-check-circle me-1"></i>Rendu</span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <div class="d-flex gap-1 justify-content-end">
+                                    <a th:href="@{/bibliothecaire/emprunts/{id}(id=${emp.id})}" class="btn btn-outline-primary btn-sm" style="font-size:11px;">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <form th:if="${emp.statut != null and emp.statut.name() != 'RENDU'}" 
+                                          th:action="@{/bibliothecaire/emprunts/{id}/retour(id=${emp.id})}" 
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Confirmer le retour de cet ouvrage ?');">
+                                        <button type="submit" class="btn btn-success btn-sm" style="font-size:11px;" title="Enregistrer le retour">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                    </form>
+                                    <form th:if="${emp.statut != null and emp.statut.name() == 'EN_COURS' and emp.prolonge != null and !emp.prolonge}" 
+                                          th:action="@{/bibliothecaire/emprunts/{id}/prolonger(id=${emp.id})}" 
+                                          method="post" class="d-inline">
+                                        <button type="submit" class="btn btn-warning btn-sm text-dark" style="font-size:11px;" title="Prolonger">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card-footer bg-white border-0" th:if="${emprunts != null and emprunts.totalPages > 1}">
+            <nav>
+                <ul class="pagination justify-content-center mb-0">
+                    <li class="page-item" th:classappend="${emprunts.first} ? 'disabled'">
+                        <a class="page-link" th:href="@{/bibliothecaire/emprunts(page=${emprunts.number - 1}, q=${q}, statut=${statut})}">Précédent</a>
+                    </li>
+                    <li th:each="i : ${#numbers.sequence(0, emprunts.totalPages - 1)}"
+                        class="page-item" th:classappend="${i == emprunts.number} ? 'active'">
+                        <a class="page-link" th:href="@{/bibliothecaire/emprunts(page=${i}, q=${q}, statut=${statut})}" th:text="${i + 1}"></a>
+                    </li>
+                    <li class="page-item" th:classappend="${emprunts.last} ? 'disabled'">
+                        <a class="page-link" th:href="@{/bibliothecaire/emprunts(page=${emprunts.number + 1}, q=${q}, statut=${statut})}">Suivant</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row g-3 mt-3">
+        <div class="col-md-4">
+            <div class="card table-card p-3 text-center">
+                <div class="text-primary fw-bold" style="font-size:1.5rem;" th:text="${nbEnCours != null ? nbEnCours : 0}">0</div>
+                <div class="text-muted small">Emprunts en cours</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card table-card p-3 text-center">
+                <div class="text-danger fw-bold" style="font-size:1.5rem;" th:text="${nbEnRetard != null ? nbEnRetard : 0}">0</div>
+                <div class="text-muted small">En retard</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card table-card p-3 text-center">
+                <div class="text-success fw-bold" style="font-size:1.5rem;" th:text="${nbRendusAujourdhui != null ? nbRendusAujourdhui : 0}">0</div>
+                <div class="text-muted small">Retours aujourd'hui</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>TarifFixeStrategy.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.pattern.strategy</a> &gt; <span class="el_source">TarifFixeStrategy.java</span></div><h1>TarifFixeStrategy.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.pattern.strategy;
+
+import com.unz.bibliotheque.model.Emprunt;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Component;
+import java.math.BigDecimal;
+
+/**
+ * Implémentation du Pattern Strategy : tarif fixe par jour de retard.
+ *
+ * Calcul : montant = nombre_jours_retard × tarif_par_jour_FCFA
+ * Exemple : 5 jours × 100 FCFA = 500 FCFA
+ *
+ * @Primary : Spring utilisera cette stratégie par défaut quand plusieurs
+ * beans PenaliteStrategy sont disponibles.
+ *
+ * Le tarif est configurable via application.yml ou ConfigurationSysteme.
+ */
+@Component(&quot;tarifFixe&quot;)
+@Primary
+<span class="fc" id="L22">public class TarifFixeStrategy implements PenaliteStrategy {</span>
+
+    /**
+     * Tarif par jour de retard en FCFA.
+     * Valeur par défaut : 100 FCFA/jour (configurable dans application.yml).
+     */
+    @Value(&quot;${app.bibliotheque.penalite-par-jour-fcfa:100}&quot;)
+    private int tarifParJour;
+
+    /**
+     * {@inheritDoc}
+     *
+     * Calcule la pénalité avec un tarif fixe par jour.
+     * Retourne ZERO si pas de retard.
+     */
+    @Override
+    public BigDecimal calculer(Emprunt emprunt) {
+<span class="fc" id="L39">        long joursRetard = emprunt.getNombreJoursRetard();</span>
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        if (joursRetard &lt;= 0) {</span>
+<span class="fc" id="L41">            return BigDecimal.ZERO;</span>
+        }
+        // Calcul : jours_retard × tarif_par_jour
+<span class="fc" id="L44">        return BigDecimal.valueOf(joursRetard * tarifParJour);</span>
+    }
+
+    /**
+     * {@inheritDoc}
+     */
+    @Override
+    public String getDescription() {
+<span class="fc" id="L52">        return &quot;Tarif fixe — &quot; + tarifParJour + &quot; FCFA par jour de retard&quot;;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

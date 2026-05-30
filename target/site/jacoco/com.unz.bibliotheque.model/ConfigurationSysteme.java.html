@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ConfigurationSysteme.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">ConfigurationSysteme.java</span></div><h1>ConfigurationSysteme.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
+
+/**
+ * Entité de configuration du système bibliothèque.
+ * Permet à l'administrateur de modifier les paramètres métier
+ * sans redémarrer l'application.
+ *
+ * Clés de configuration disponibles :
+ *   - DUREE_EMPRUNT_JOURS         : durée par défaut (14 jours)
+ *   - MAX_EMPRUNTS_SIMULTANES     : quota par étudiant (3)
+ *   - MAX_RESERVATIONS_SIMULTANES : quota réservations (5)
+ *   - PENALITE_PAR_JOUR_FCFA      : montant journalier (100 FCFA)
+ *   - SEUIL_BLOCAGE_FCFA          : seuil de blocage compte (500 FCFA)
+ *   - DUREE_RESERVATION_HEURES    : délai confirmation réservation (48h)
+ */
+@Entity
+@Table(name = &quot;configurations_systeme&quot;)
+<span class="pc" id="L22">@Getter @Setter @NoArgsConstructor @AllArgsConstructor</span>
+public class ConfigurationSysteme {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L27">    private Long id;</span>
+
+    /** Clé de configuration (identifiant unique) */
+    @NotBlank
+    @Column(nullable = false, unique = true, length = 100)
+<span class="nc" id="L32">    private String cle;</span>
+
+    /** Valeur de la configuration (stockée en String, convertie à l'usage) */
+    @NotBlank
+    @Column(nullable = false, length = 500)
+<span class="nc" id="L37">    private String valeur;</span>
+
+    /** Description lisible par l'administrateur */
+    @Column(length = 300)
+<span class="nc" id="L41">    private String description;</span>
+
+    /**
+     * Retourne la valeur convertie en entier.
+     *
+     * @return valeur entière de la configuration
+     * @throws NumberFormatException si la valeur n'est pas un entier valide
+     */
+    public int getValeurAsInt() {
+<span class="fc" id="L50">        return Integer.parseInt(valeur.trim());</span>
+    }
+
+    /**
+     * Retourne la valeur convertie en décimal (pour les montants FCFA).
+     *
+     * @return valeur décimale de la configuration
+     */
+    public java.math.BigDecimal getValeurAsDecimal() {
+<span class="nc" id="L59">        return new java.math.BigDecimal(valeur.trim());</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>
