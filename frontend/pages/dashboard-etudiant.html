@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Étudiant - Bibliothèque UNZ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; color: #333; }
+        .header { background: linear-gradient(135deg, #1a2a6c, #b21f1f); color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+        .logout-btn { background: rgba(255,255,255,0.2); border: none; padding: 8px 20px; border-radius: 5px; color: white; cursor: pointer; }
+        .container { max-width: 1200px; margin: 20px auto; padding: 0 20px; }
+        .tabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .tab-btn { background: white; border: none; padding: 12px 25px; border-radius: 8px; cursor: pointer; font-weight: 500; }
+        .tab-btn.active { background: #1a2a6c; color: white; }
+        .section { display: none; background: white; border-radius: 10px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section.active { display: block; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .search-box input, .search-box select { padding: 10px; border: 1px solid #ddd; border-radius: 5px; flex: 1; }
+        .livres-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .livre-card { border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px; background: white; }
+        .livre-card h4 { color: #1a2a6c; margin-bottom: 8px; }
+        .livre-card p { margin: 5px 0; font-size: 13px; color: #666; }
+        .disponible { color: #27ae60; font-weight: bold; }
+        .indisponible { color: #e74c3c; font-weight: bold; }
+        .btn { border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; margin: 3px; }
+        .btn-primary { background: #3498db; color: white; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #1a2a6c; color: white; }
+        .badge-success { background: #d4edda; color: #155724; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+        .badge-warning { background: #fff3cd; color: #856404; padding: 3px 8px; border-radius: 12px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div><h2>📚 Bibliothèque UNZ</h2><p>Espace Étudiant</p></div>
+    <div><span id="userName"></span> <button class="logout-btn" onclick="logout()">Déconnexion</button></div>
+</div>
+
+<div class="container">
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showSection('catalogue')">📖 Catalogue</button>
+        <button class="tab-btn" onclick="showSection('mesEmprunts')">📋 Mes emprunts</button>
+        <button class="tab-btn" onclick="showSection('mesReservations')">⭐ Mes réservations</button>
+        <button class="tab-btn" onclick="showSection('monProfil')">👤 Mon profil</button>
+    </div>
+
+    <div id="catalogue" class="section active">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Rechercher par titre, auteur..." onkeyup="rechercherLivres()">
+            <select id="categorieFilter" onchange="rechercherLivres()">
+                <option value="">Toutes catégories</option>
+                <option>Littérature</option><option>Roman</option><option>Sciences</option>
+                <option>Histoire</option><option>Informatique</option><option>Philosophie</option>
+            </select>
+            <select id="disponibiliteFilter" onchange="rechercherLivres()">
+                <option value="">Tous</option><option value="disponible">Disponibles</option><option value="indisponible">Indisponibles</option>
+            </select>
+        </div>
+        <div id="livresList" class="livres-grid"></div>
+    </div>
+
+    <div id="mesEmprunts" class="section">
+        <table id="empruntsTable"><thead><tr><th>Livre</th><th>Date emprunt</th><th>Date retour</th><th>Statut</th><th>Action</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="mesReservations" class="section">
+        <table id="reservationsTable"><thead><tr><th>Livre</th><th>Date réservation</th><th>Position</th><th>Statut</th><th>Action</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div id="monProfil" class="section">
+        <div id="profilInfo" style="background:#f8f9fa; padding:20px; border-radius:8px;"></div>
+    </div>
+</div>
+
+<script>
+    // Vérification du rôle - UNE SEULE FOIS
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    if (!currentUser || currentUser.role !== 'etudiant') {
+        window.location.href = '../index.html';
+    }
+
+    // Données des livres
+    const livresData = [
+        { id: 1, titre: "Le Petit Prince", auteur: "Antoine de Saint-Exupéry", categorie: "Littérature", disponible: true, disponibles: 3, totalExemplaires: 5 },
+        { id: 2, titre: "1984", auteur: "George Orwell", categorie: "Roman", disponible: false, disponibles: 0, totalExemplaires: 3 },
+        { id: 3, titre: "Les Misérables", auteur: "Victor Hugo", categorie: "Classique", disponible: true, disponibles: 2, totalExemplaires: 4 },
+        { id: 4, titre: "L'Étranger", auteur: "Albert Camus", categorie: "Philosophie", disponible: true, disponibles: 1, totalExemplaires: 2 },
+        { id: 5, titre: "Clean Code", auteur: "Robert C. Martin", categorie: "Informatique", disponible: true, disponibles: 2, totalExemplaires: 3 },
+        { id: 6, titre: "La Peste", auteur: "Albert Camus", categorie: "Roman", disponible: false, disponibles: 0, totalExemplaires: 2 }
+    ];
+
+    let livres = [...livresData];
+    let filteredLivres = [...livres];
+    let currentPage = 1;
+    let itemsPerPage = 12;
+    let user = currentUser;
+    
+    let mesEmprunts = JSON.parse(localStorage.getItem(`emprunts_${user.id}`) || '[]');
+    let mesReservations = JSON.parse(localStorage.getItem(`reservations_${user.id}`) || '[]');
+
+    document.getElementById('userName').innerHTML = `👋 ${user.nom || user.email}`;
+
+    function showSection(sectionId) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(sectionId).classList.add('active');
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        event.target.classList.add('active');
+        if (sectionId === 'mesEmprunts') afficherEmprunts();
+        if (sectionId === 'mesReservations') afficherReservations();
+        if (sectionId === 'monProfil') afficherProfil();
+    }
+
+    function rechercherLivres() {
+        let searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        let categorie = document.getElementById('categorieFilter').value;
+        let disponibilite = document.getElementById('disponibiliteFilter').value;
+        
+        filteredLivres = livres.filter(livre => {
+            let matchSearch = livre.titre.toLowerCase().includes(searchTerm) || livre.auteur.toLowerCase().includes(searchTerm);
+            let matchCategorie = !categorie || livre.categorie === categorie;
+            let matchDispo = !disponibilite || (disponibilite === 'disponible' ? livre.disponible : !livre.disponible);
+            return matchSearch && matchCategorie && matchDispo;
+        });
+        
+        currentPage = 1;
+        afficherLivres();
+    }
+
+    function afficherLivres() {
+        let start = (currentPage - 1) * itemsPerPage;
+        let paginated = filteredLivres.slice(start, start + itemsPerPage);
+        let container = document.getElementById('livresList');
+        
+        if (paginated.length === 0) {
+            container.innerHTML = '<p style="text-align:center; padding:50px;">📖 Aucun livre trouvé</p>';
+            return;
+        }
+        
+        let html = '';
+        for (let i = 0; i < paginated.length; i++) {
+            let livre = paginated[i];
+            let statusClass = livre.disponible ? 'disponible' : 'indisponible';
+            let statusText = livre.disponible ? '✅ Disponible' : '❌ Indisponible';
+            let btnText = livre.disponible ? '📖 Emprunter' : '⭐ Réserver';
+            let btnAction = livre.disponible ? 'emprunter' : 'reserver';
+            
+            html += '<div class="livre-card">';
+            html += '<h4>' + livre.titre + '</h4>';
+            html += '<p>✍️ ' + livre.auteur + '</p>';
+            html += '<p>📁 ' + livre.categorie + '</p>';
+            html += '<p>📚 ' + livre.disponibles + '/' + livre.totalExemplaires + ' ex.</p>';
+            html += '<p class="' + statusClass + '">' + statusText + '</p>';
+            html += '<button class="btn btn-primary" onclick="' + btnAction + '(' + livre.id + ')">' + btnText + '</button>';
+            html += '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function emprunter(id) {
+        let livre = livres.find(l => l.id === id);
+        if (!livre.disponible) {
+            alert("❌ Ce livre n'est pas disponible");
+            return;
+        }
+        alert("✅ Demande d'emprunt pour \"" + livre.titre + "\" envoyée !");
+        livre.disponible = false;
+        livre.disponibles--;
+        rechercherLivres();
+    }
+
+    function reserver(id) {
+        let livre = livres.find(l => l.id === id);
+        alert("⭐ Réservation pour \"" + livre.titre + "\" enregistrée !");
+    }
+
+    function afficherEmprunts() {
+        let tbody = document.querySelector('#empruntsTable tbody');
+        if (mesEmprunts.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Aucun emprunt</td></tr>';
+            return;
+        }
+        let html = '';
+        for (let i = 0; i < mesEmprunts.length; i++) {
+            let e = mesEmprunts[i];
+            html += '<tr><td>' + e.titre + '</td><td>' + e.dateEmprunt + '</td><td>' + e.dateRetour + '</td><td><span class="badge-success">En cours</span></td><td>-</td></tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function afficherReservations() {
+        let tbody = document.querySelector('#reservationsTable tbody');
+        if (mesReservations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center">Aucune réservation</td></tr>';
+            return;
+        }
+        let html = '';
+        for (let i = 0; i < mesReservations.length; i++) {
+            let r = mesReservations[i];
+            html += '<tr><td>' + r.titre + '</td><td>' + r.dateReservation + '</td><td>' + r.position + '</td><td><span class="badge-warning">En attente</span></td><td><button class="btn btn-primary" onclick="annulerReservation(' + r.id + ')">Annuler</button></td></tr>';
+        }
+        tbody.innerHTML = html;
+    }
+
+    function annulerReservation(id) {
+        mesReservations = mesReservations.filter(r => r.id !== id);
+        localStorage.setItem(`reservations_${user.id}`, JSON.stringify(mesReservations));
+        afficherReservations();
+        alert("Réservation annulée");
+    }
+
+    function afficherProfil() {
+        document.getElementById('profilInfo').innerHTML = `
+            <p><strong>👤 Nom:</strong> ${user.nom || 'Non renseigné'}</p>
+            <p><strong>📧 Email:</strong> ${user.email}</p>
+            <p><strong>🎓 Matricule:</strong> ${user.matricule || 'Non renseigné'}</p>
+            <p><strong>📚 Filière:</strong> ${user.filiere || 'Non renseignée'}</p>
+            <p><strong>✅ Statut:</strong> Actif</p>
+        `;
+    }
+
+    function logout() {
+        localStorage.removeItem('currentUser');
+        window.location.href = '../index.html';
+    }
+
+    // Initialisation
+    rechercherLivres();
+</script>
+</body>
+</html>

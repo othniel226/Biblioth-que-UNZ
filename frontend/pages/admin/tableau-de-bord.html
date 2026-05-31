@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration — Bibliothèque UNZ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; }
+        .navbar { background: linear-gradient(135deg,#212121,#424242); }
+        .action-card { border-radius: 14px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); transition: transform 0.2s; }
+        .action-card:hover { transform: translateY(-3px); }
+        .stat-number { font-size: 2rem; font-weight: 800; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark">
+    <div class="container">
+        <span class="navbar-brand fw-bold"><i class="fas fa-shield-alt me-2"></i>Bibliothèque UNZ — Administration</span>
+        <a href="../auth/login.html" class="btn btn-outline-light btn-sm" onclick="localStorage.clear()">
+            <i class="fas fa-sign-out-alt me-1"></i>Déconnexion
+        </a>
+    </div>
+</nav>
+<div class="container py-4">
+    <h4 class="fw-bold mb-4"><i class="fas fa-cogs me-2"></i>Tableau de bord Administrateur</h4>
+
+    <!-- Stats globales -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card action-card text-center p-3">
+                <div class="stat-number text-primary">13</div>
+                <div class="text-muted small">Ouvrages</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card action-card text-center p-3">
+                <div class="stat-number text-success">20</div>
+                <div class="text-muted small">Exemplaires</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card action-card text-center p-3">
+                <div class="stat-number text-warning">8</div>
+                <div class="text-muted small">Étudiants</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card action-card text-center p-3">
+                <div class="stat-number text-danger">3</div>
+                <div class="text-muted small">Retards</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions admin -->
+    <div class="row g-3">
+        <div class="col-md-4">
+            <div class="card action-card p-4 border-start border-primary border-4">
+                <i class="fas fa-users fa-2x text-primary mb-3"></i>
+                <h6 class="fw-bold">Gérer les utilisateurs</h6>
+                <p class="text-muted small">Créer, activer, désactiver des comptes</p>
+                <a href="#" class="btn btn-primary btn-sm">Gérer</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card action-card p-4 border-start border-success border-4">
+                <i class="fas fa-chart-bar fa-2x text-success mb-3"></i>
+                <h6 class="fw-bold">Rapports &amp; Statistiques</h6>
+                <p class="text-muted small">Ouvrages populaires, emprunts, retards</p>
+                <a href="#" class="btn btn-success btn-sm">Voir</a>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card action-card p-4 border-start border-warning border-4">
+                <i class="fas fa-sliders-h fa-2x text-warning mb-3"></i>
+                <h6 class="fw-bold">Configuration système</h6>
+                <p class="text-muted small">Durée emprunt, pénalités, quotas</p>
+                <a href="#" class="btn btn-warning btn-sm">Configurer</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Configuration système affichée -->
+    <div class="card mt-4 border-0 shadow-sm">
+        <div class="card-header bg-white fw-bold">
+            <i class="fas fa-cog me-2 text-warning"></i>Paramètres actuels
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-3 text-center">
+                    <div class="fw-bold text-primary fs-4">14 jours</div>
+                    <div class="text-muted small">Durée emprunt</div>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="fw-bold text-primary fs-4">100 FCFA</div>
+                    <div class="text-muted small">Pénalité/jour</div>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="fw-bold text-primary fs-4">500 FCFA</div>
+                    <div class="text-muted small">Seuil blocage</div>
+                </div>
+                <div class="col-md-3 text-center">
+                    <div class="fw-bold text-primary fs-4">3 emprunts</div>
+                    <div class="text-muted small">Quota max</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

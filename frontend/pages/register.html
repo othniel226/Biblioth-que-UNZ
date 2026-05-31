@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inscription - Bibliothèque UNZ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .register-container {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 500px;
+            max-width: 100%;
+        }
+        h1 { color: #333; text-align: center; margin-bottom: 10px; }
+        .subtitle { text-align: center; color: #666; margin-bottom: 30px; font-size: 14px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #333; font-weight: 500; }
+        .form-group label .required { color: #e74c3c; }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px;
+        }
+        .btn-register {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border: none; padding: 12px; width: 100%; border-radius: 5px;
+            font-size: 16px; cursor: pointer;
+        }
+        .error-msg { color: #e74c3c; font-size: 12px; margin-top: 5px; display: none; }
+        .success-msg { color: #27ae60; font-size: 14px; text-align: center; margin-top: 15px; display: none; }
+        .login-link { text-align: center; margin-top: 20px; color: #666; }
+        .login-link a { color: #667eea; text-decoration: none; }
+        .strength-meter { height: 4px; background: #ddd; border-radius: 2px; margin-top: 5px; overflow: hidden; }
+        .strength-bar { height: 100%; width: 0%; transition: width 0.3s; }
+    </style>
+</head>
+<body>
+    <div class="register-container">
+        <h1>📚 Bibliothèque UNZ</h1>
+        <div class="subtitle">Créer votre compte étudiant</div>
+        <form id="registerForm">
+            <div class="form-group">
+                <label>Nom complet <span class="required">*</span></label>
+                <input type="text" id="nom" required>
+            </div>
+            <div class="form-group">
+                <label>Email universitaire <span class="required">*</span></label>
+                <input type="email" id="email" required placeholder="prenom.nom@unz.bf">
+                <div id="emailError" class="error-msg"></div>
+            </div>
+            <div class="form-group">
+                <label>Matricule <span class="required">*</span></label>
+                <input type="text" id="matricule" required placeholder="Ex: 2024-001">
+                <div id="matriculeError" class="error-msg"></div>
+            </div>
+            <div class="form-group">
+                <label>Filière <span class="required">*</span></label>
+                <select id="filiere" required>
+                    <option value="">Sélectionnez votre filière</option>
+                    <option>Génie Logiciel</option><option>Réseaux et Télécoms</option>
+                    <option>Sécurité Informatique</option><option>Mathématiques Appliquées</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Niveau <span class="required">*</span></label>
+                <select id="niveau" required>
+                    <option value="">Sélectionnez votre niveau</option>
+                    <option>L1</option><option>L2</option><option>L3</option><option>M1</option><option>M2</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Mot de passe <span class="required">*</span></label>
+                <input type="password" id="password" required>
+                <div class="strength-meter"><div class="strength-bar" id="strengthBar"></div></div>
+                <div id="passwordError" class="error-msg"></div>
+            </div>
+            <div class="form-group">
+                <label>Confirmer le mot de passe <span class="required">*</span></label>
+                <input type="password" id="confirmPassword" required>
+                <div id="confirmError" class="error-msg"></div>
+            </div>
+            <button type="submit" class="btn-register">📝 S'inscrire</button>
+        </form>
+        <div id="successMsg" class="success-msg"></div>
+        <div class="login-link">Déjà inscrit ? <a href="../index.html">Se connecter</a></div>
+    </div>
+
+    <script>
+        document.getElementById('password').addEventListener('input', function() {
+            let pwd = this.value;
+            let strength = 0;
+            if (pwd.length >= 8) strength++;
+            if (pwd.match(/[A-Z]/)) strength++;
+            if (pwd.match(/[0-9]/)) strength++;
+            let bar = document.getElementById('strengthBar');
+            bar.style.width = (strength / 3) * 100 + '%';
+            bar.style.background = strength === 3 ? '#27ae60' : strength === 2 ? '#f39c12' : '#e74c3c';
+        });
+
+        document.getElementById('registerForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            let nom = document.getElementById('nom').value;
+            let email = document.getElementById('email').value;
+            let matricule = document.getElementById('matricule').value;
+            let filiere = document.getElementById('filiere').value;
+            let niveau = document.getElementById('niveau').value;
+            let password = document.getElementById('password').value;
+            let confirm = document.getElementById('confirmPassword').value;
+
+            document.querySelectorAll('.error-msg').forEach(el => el.style.display = 'none');
+            let isValid = true;
+            let users = JSON.parse(localStorage.getItem('users') || '[]');
+
+            if (users.some(u => u.email === email)) {
+                document.getElementById('emailError').textContent = 'Cet email est déjà utilisé';
+                document.getElementById('emailError').style.display = 'block';
+                isValid = false;
+            }
+            if (users.some(u => u.matricule === matricule)) {
+                document.getElementById('matriculeError').textContent = 'Ce matricule est déjà utilisé';
+                document.getElementById('matriculeError').style.display = 'block';
+                isValid = false;
+            }
+            if (password.length < 8) {
+                document.getElementById('passwordError').textContent = '8 caractères minimum';
+                document.getElementById('passwordError').style.display = 'block';
+                isValid = false;
+            }
+            if (!password.match(/[A-Z]/)) {
+                document.getElementById('passwordError').textContent = 'Une majuscule requise';
+                document.getElementById('passwordError').style.display = 'block';
+                isValid = false;
+            }
+            if (!password.match(/[0-9]/)) {
+                document.getElementById('passwordError').textContent = 'Un chiffre requis';
+                document.getElementById('passwordError').style.display = 'block';
+                isValid = false;
+            }
+            if (password !== confirm) {
+                document.getElementById('confirmError').textContent = 'Les mots de passe ne correspondent pas';
+                document.getElementById('confirmError').style.display = 'block';
+                isValid = false;
+            }
+
+            if (isValid) {
+                let newUser = {
+                    id: users.length + 1, nom: nom, email: email, matricule: matricule,
+                    filiere: filiere, niveau: niveau, role: 'etudiant', statut: 'actif',
+                    dateInscription: new Date().toISOString().split('T')[0], password: password
+                };
+                users.push(newUser);
+                localStorage.setItem('users', JSON.stringify(users));
+                document.getElementById('successMsg').textContent = '✅ Inscription réussie ! Redirection...';
+                document.getElementById('successMsg').style.display = 'block';
+                setTimeout(() => window.location.href = '../index.html', 2000);
+            }
+        });
+    </script>
+</body>
+</html>

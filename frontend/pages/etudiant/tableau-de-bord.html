@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tableau de bord — Étudiant</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; }
+        .navbar { background: linear-gradient(135deg,#1b5e20,#2e7d32); }
+        .stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .stat-number { font-size: 2rem; font-weight: 800; }
+        .table-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="container">
+        <span class="navbar-brand fw-bold"><i class="fas fa-book-open me-2"></i>Bibliothèque UNZ</span>
+        <div class="d-flex align-items-center gap-2">
+            <a href="catalogue.html" class="btn btn-outline-light btn-sm"><i class="fas fa-search me-1"></i>Catalogue</a>
+            <span class="text-white small" id="nomEtudiant"></span>
+            <a href="../auth/login.html" class="btn btn-outline-light btn-sm" onclick="deconnecter()"><i class="fas fa-sign-out-alt"></i></a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <!-- En-tête personnalisé -->
+    <div class="p-4 rounded-3 text-white mb-4" style="background:linear-gradient(135deg,#1b5e20,#2e7d32);">
+        <h4 class="fw-bold mb-1">Bonjour, <span id="prenomEtudiant">Étudiant</span> 👋</h4>
+        <p class="mb-0 opacity-75" id="infoEtudiant">Bienvenue dans votre espace bibliothèque.</p>
+    </div>
+
+    <!-- Chargement -->
+    <div id="loading" class="text-center py-5">
+        <div class="spinner-border text-success" role="status"></div>
+        <p class="text-muted mt-2">Chargement de vos données...</p>
+    </div>
+
+    <!-- Contenu principal (masqué pendant le chargement) -->
+    <div id="contenu" class="d-none">
+        <!-- Alerte pénalités -->
+        <div id="alertePenalites" class="alert alert-warning d-none mb-4">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Pénalités impayées :</strong> <span id="montantPenalites"></span> FCFA
+            — Réglez-les à la bibliothèque.
+        </div>
+
+        <!-- Cartes statistiques -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100 text-center p-3">
+                    <div class="stat-number text-primary" id="nbEnCours">0</div>
+                    <div class="text-muted small">En cours</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100 text-center p-3">
+                    <div class="stat-number text-danger" id="nbRetards">0</div>
+                    <div class="text-muted small">En retard</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100 text-center p-3">
+                    <div class="stat-number text-warning" id="nbReservations">0</div>
+                    <div class="text-muted small">Réservations</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="card stat-card h-100 text-center p-3">
+                    <div class="stat-number text-success" id="nbTotal">0</div>
+                    <div class="text-muted small">Total emprunts</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Emprunts en cours -->
+        <div class="card table-card mb-4">
+            <div class="card-header bg-white border-0 pt-3">
+                <h6 class="fw-bold mb-0"><i class="fas fa-book me-2 text-primary"></i>Mes emprunts en cours</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Ouvrage</th>
+                                <th>Date emprunt</th>
+                                <th>Retour prévu</th>
+                                <th>Statut</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEmprunts">
+                            <tr><td colspan="5" class="text-center text-muted py-3">Aucun emprunt en cours.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+/**
+ * Tableau de bord étudiant — JavaScript
+ * Récupère les données depuis le backend Spring Boot via l'API REST.
+ * Utilise le token JWT stocké dans localStorage pour l'authentification.
+ */
+
+const API_URL = 'http://localhost:8081';
+const token   = localStorage.getItem('token');
+const role    = localStorage.getItem('role');
+const nom     = localStorage.getItem('nom') || 'Étudiant';
+
+// Vérification de l'authentification
+if (!token) {
+    window.location.href = '../auth/login.html';
+}
+
+// Afficher le nom de l'utilisateur dans la navbar
+document.getElementById('nomEtudiant').textContent = nom;
+document.getElementById('prenomEtudiant').textContent = nom.split(' ')[0] || nom;
+
+/**
+ * En-tête HTTP avec le token JWT pour toutes les requêtes API.
+ */
+const headers = {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${token}`
+};
+
+/**
+ * Charge les données du tableau de bord depuis le backend.
+ * En cas d'erreur (backend non disponible), affiche des données démo.
+ */
+async function chargerDonnees() {
+    try {
+        // Appel API au backend Spring Boot
+        const [empruntsRes] = await Promise.all([
+            fetch(`${API_URL}/api/etudiant/emprunts`, { headers })
+        ]);
+
+        if (empruntsRes.status === 401) {
+            // Token expiré → rediriger vers la connexion
+            localStorage.clear();
+            window.location.href = '../auth/login.html';
+            return;
+        }
+
+        const emprunts = await empruntsRes.json();
+        afficherEmprunts(emprunts);
+
+    } catch (error) {
+        // Mode démo : afficher des données fictives si le backend n'est pas disponible
+        console.warn('Backend non disponible — mode démo');
+        afficherDemonstration();
+    } finally {
+        document.getElementById('loading').classList.add('d-none');
+        document.getElementById('contenu').classList.remove('d-none');
+    }
+}
+
+/**
+ * Affiche les emprunts dans le tableau.
+ * @param {Array} emprunts - Liste des emprunts reçus de l'API
+ */
+function afficherEmprunts(emprunts) {
+    const tbody = document.getElementById('tbodyEmprunts');
+    const enRetard = emprunts.filter(e => e.enRetard);
+
+    document.getElementById('nbEnCours').textContent = emprunts.length;
+    document.getElementById('nbRetards').textContent = enRetard.length;
+
+    if (emprunts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted py-3">
+            <i class="fas fa-book-open fa-2x mb-2 d-block opacity-25"></i>
+            Aucun emprunt en cours. <a href="catalogue.html">Parcourir le catalogue →</a>
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = emprunts.map(emp => `
+        <tr>
+            <td class="fw-semibold">${emp.exemplaire?.ouvrage?.titre || emp.titreOuvrage || 'N/A'}</td>
+            <td class="small text-muted">${formatDate(emp.dateEmprunt)}</td>
+            <td class="small">${formatDate(emp.dateRetourPrevu)}</td>
+            <td>${badgeStatut(emp.statut, emp.enRetard)}</td>
+            <td>
+                ${!emp.prolonge ? `<button class="btn btn-outline-primary btn-sm" style="font-size:11px;"
+                    onclick="prolonger(${emp.id})">Prolonger</button>` : '<span class="text-muted small">Prolongé</span>'}
+            </td>
+        </tr>
+    `).join('');
+}
+
+/**
+ * Affiche des données de démonstration si le backend n'est pas disponible.
+ */
+function afficherDemonstration() {
+    document.getElementById('nbEnCours').textContent = '2';
+    document.getElementById('nbRetards').textContent = '1';
+    document.getElementById('nbReservations').textContent = '1';
+    document.getElementById('nbTotal').textContent = '8';
+
+    document.getElementById('tbodyEmprunts').innerHTML = `
+        <tr>
+            <td class="fw-semibold">Introduction au Génie Logiciel</td>
+            <td class="small text-muted">01/05/2026</td>
+            <td class="small">15/05/2026</td>
+            <td><span class="badge bg-danger">En retard</span></td>
+            <td><span class="text-muted small">Prolongé</span></td>
+        </tr>
+        <tr>
+            <td class="fw-semibold">Les Soleils des Indépendances</td>
+            <td class="small text-muted">10/05/2026</td>
+            <td class="small">24/05/2026</td>
+            <td><span class="badge bg-primary">En cours</span></td>
+            <td><button class="btn btn-outline-primary btn-sm" style="font-size:11px;">Prolonger</button></td>
+        </tr>
+    `;
+}
+
+/**
+ * Retourne un badge HTML selon le statut de l'emprunt.
+ */
+function badgeStatut(statut, enRetard) {
+    if (enRetard || statut === 'EN_RETARD') return '<span class="badge bg-danger">En retard</span>';
+    if (statut === 'PROLONGE') return '<span class="badge bg-warning text-dark">Prolongé</span>';
+    return '<span class="badge bg-primary">En cours</span>';
+}
+
+/**
+ * Formate une date ISO en format lisible (JJ/MM/AAAA).
+ */
+function formatDate(dateStr) {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('fr-FR');
+}
+
+/**
+ * Demande une prolongation d'emprunt via l'API.
+ */
+async function prolonger(empruntId) {
+    if (!confirm('Confirmer la demande de prolongation ?')) return;
+    try {
+        const res = await fetch(`${API_URL}/api/etudiant/emprunts/${empruntId}/prolonger`, {
+            method: 'POST', headers
+        });
+        if (res.ok) {
+            alert('Prolongation accordée avec succès !');
+            chargerDonnees();
+        } else {
+            const err = await res.json();
+            alert(err.message || 'Impossible de prolonger cet emprunt.');
+        }
+    } catch (e) {
+        alert('Mode démo : prolongation simulée.');
+    }
+}
+
+/**
+ * Déconnecte l'utilisateur en effaçant le localStorage.
+ */
+function deconnecter() {
+    localStorage.clear();
+}
+
+// Lancement au chargement de la page
+chargerDonnees();
+</script>
+</body>
+</html>

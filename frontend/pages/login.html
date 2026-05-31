@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion - Bibliothèque UNZ</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb4d);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .login-container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            padding: 40px;
+            width: 400px;
+            max-width: 100%;
+            text-align: center;
+        }
+        .logo-area {
+            margin-bottom: 20px;
+        }
+        .logo-area h1 {
+            color: #1a2a6c;
+            font-size: 1.8em;
+        }
+        .logo-area p {
+            color: #666;
+            font-size: 0.9em;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover { opacity: 0.9; }
+        .error {
+            color: #e74c3c;
+            margin-top: 10px;
+            display: none;
+        }
+        .register-link {
+            margin-top: 20px;
+            color: #666;
+        }
+        .register-link a {
+            color: #1a2a6c;
+            text-decoration: none;
+        }
+        .back-link {
+            margin-top: 15px;
+        }
+        .back-link a {
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="logo-area">
+            <h1>📚 Bibliothèque UNZ</h1>
+            <p>Universite Norbert Zongo</p>
+        </div>
+        
+        <input type="email" id="email" placeholder="Email universitaire">
+        <input type="password" id="password" placeholder="Mot de passe">
+        <button onclick="connexion()">Se connecter</button>
+        
+        <div id="errorMsg" class="error"></div>
+        
+        <div class="register-link">
+            Nouvel étudiant ? <a href="register.html">Créer un compte</a>
+        </div>
+        <div class="back-link">
+            <a href="../index.html">← Retour au catalogue</a>
+        </div>
+    </div>
+
+    <script>
+        // Créer les comptes par défaut si inexistants
+        if (!localStorage.getItem('users')) {
+            let defaultUsers = [
+                { id: 1, nom: "Jean Dupont", email: "etudiant@unz.bf", matricule: "ETU001", role: "etudiant", statut: "actif", password: "password" },
+                { id: 2, nom: "Alice Konaté", email: "biblio@unz.bf", matricule: "BIB001", role: "bibliothecaire", statut: "actif", password: "password" },
+                { id: 3, nom: "Ousmane Traoré", email: "admin@unz.bf", matricule: "ADMIN001", role: "admin", statut: "actif", password: "password" }
+            ];
+            localStorage.setItem('users', JSON.stringify(defaultUsers));
+        }
+
+        function connexion() {
+            let email = document.getElementById('email').value;
+            let password = document.getElementById('password').value;
+            let users = JSON.parse(localStorage.getItem('users'));
+            let user = users.find(u => u.email === email && u.password === password);
+            
+            if (user) {
+                if (user.statut === 'inactif') {
+                    document.getElementById('errorMsg').textContent = 'Votre compte a été désactivé';
+                    document.getElementById('errorMsg').style.display = 'block';
+                    return;
+                }
+                
+                // Stocker l'utilisateur connecté
+                localStorage.setItem('currentUser', JSON.stringify(user));
+                
+                // Rediriger selon le rôle
+                if (user.role === 'etudiant') {
+                    window.location.href = 'dashboard-etudiant.html';
+                } else if (user.role === 'bibliothecaire') {
+                    window.location.href = 'dashboard-bibliothecaire.html';
+                } else if (user.role === 'admin') {
+                    window.location.href = 'dashboard-admin.html';
+                }
+            } else {
+                document.getElementById('errorMsg').textContent = 'Email ou mot de passe incorrect';
+                document.getElementById('errorMsg').style.display = 'block';
+            }
+        }
+        
+        // Permettre la connexion avec la touche Entrée
+        document.getElementById('password').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') connexion();
+        });
+    </script>
+</body>
+</html>

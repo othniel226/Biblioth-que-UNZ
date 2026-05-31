@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bibliothèque UNZ - Catalogue</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+        }
+
+        /* Header avec dégradé bleu professionnel */
+        .hero {
+            background: linear-gradient(135deg, #0c2e5e 0%, #1a4a8a 50%, #2c6eae 100%);
+            color: white;
+            padding: 40px 20px;
+            text-align: center;
+            position: relative;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            backdrop-filter: blur(5px);
+        }
+
+        .univ-name h1 {
+            font-size: 2em;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+
+        .univ-name .sous-titre {
+            font-size: 0.9em;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .univ-name .devise {
+            font-size: 0.8em;
+            margin-top: 8px;
+            font-family: 'Times New Roman', serif;
+            letter-spacing: 1px;
+        }
+
+        .hero h2 {
+            font-size: 1.5em;
+            margin-top: 15px;
+            font-weight: 500;
+        }
+
+        .hero p {
+            font-size: 1em;
+            opacity: 0.9;
+            margin-top: 5px;
+        }
+
+        /* Zone authentification */
+        .auth-area {
+            position: absolute;
+            top: 20px;
+            right: 30px;
+        }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(255,255,255,0.15);
+            padding: 8px 20px;
+            border-radius: 30px;
+            backdrop-filter: blur(5px);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-auth {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            padding: 8px 22px;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .btn-auth:hover {
+            background: rgba(255,255,255,0.35);
+            transform: translateY(-2px);
+        }
+
+        .btn-logout {
+            background: #dc3545;
+        }
+
+        .btn-logout:hover {
+            background: #c82333;
+        }
+
+        /* Container principal */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px 20px;
+        }
+
+        /* Section recherche */
+        .search-section {
+            background: white;
+            padding: 25px;
+            border-radius: 16px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+            margin-bottom: 30px;
+        }
+
+        .search-row {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            flex: 2;
+            padding: 12px 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 30px;
+            font-size: 15px;
+            transition: all 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #1a4a8a;
+            box-shadow: 0 0 0 3px rgba(26,74,138,0.1);
+        }
+
+        .categorie-select {
+            flex: 1;
+            padding: 12px 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 30px;
+            font-size: 15px;
+            background: white;
+            cursor: pointer;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: #f0f2f5;
+            border: none;
+            padding: 8px 22px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .filter-btn.active {
+            background: #1a4a8a;
+            color: white;
+        }
+
+        .filter-btn:hover:not(.active) {
+            background: #e0e4e8;
+        }
+
+        /* Grille des livres */
+        .livres-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+
+        .livre-card {
+            background: white;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .livre-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.15);
+        }
+
+        .livre-cover {
+            background: linear-gradient(135deg, #1a4a8a 0%, #2c6eae 100%);
+            height: 140px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 50px;
+        }
+
+        .livre-info {
+            padding: 20px;
+        }
+
+        .livre-info h3 {
+            color: #1a2a6c;
+            margin-bottom: 8px;
+            font-size: 1.1em;
+            font-weight: 700;
+        }
+
+        .livre-info p {
+            color: #666;
+            font-size: 13px;
+            margin: 6px 0;
+        }
+
+        .disponible {
+            display: inline-block;
+            padding: 4px 14px;
+            background: #d4edda;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #155724;
+            font-weight: 600;
+        }
+
+        .indisponible {
+            display: inline-block;
+            padding: 4px 14px;
+            background: #f8d7da;
+            border-radius: 20px;
+            font-size: 12px;
+            color: #721c24;
+            font-weight: 600;
+        }
+
+        .btn-action {
+            width: 100%;
+            padding: 10px;
+            margin-top: 15px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .btn-emprunter {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-reserver {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-action:hover {
+            opacity: 0.9;
+            transform: scale(0.98);
+        }
+
+        /* Pagination */
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 40px;
+            flex-wrap: wrap;
+        }
+
+        .page-btn {
+            background: white;
+            border: 1px solid #ddd;
+            padding: 8px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .page-btn.active {
+            background: #1a4a8a;
+            color: white;
+            border-color: #1a4a8a;
+        }
+
+        .page-btn:hover:not(.active) {
+            background: #f0f2f5;
+            border-color: #1a4a8a;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 35px;
+            width: 420px;
+            max-width: 90%;
+            text-align: center;
+            animation: fadeInUp 0.3s ease;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-content h2 {
+            color: #1a2a6c;
+            margin-bottom: 15px;
+        }
+
+        .modal-content p {
+            color: #666;
+            margin-bottom: 20px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            padding: 10px 24px;
+            border: none;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #1a4a8a 0%, #2c6eae 100%);
+            color: white;
+        }
+
+        .modal-btn-primary-green {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .modal-btn-secondary {
+            background: #dc3545;
+            color: white;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        /* Footer */
+        .footer {
+            background: #0c2e5e;
+            color: white;
+            text-align: center;
+            padding: 30px;
+            margin-top: 50px;
+        }
+
+        .footer p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h2 { font-size: 1.2em; }
+            .logo { width: 55px; height: 55px; font-size: 28px; }
+            .univ-name h1 { font-size: 1.3em; }
+            .auth-area { position: static; margin-bottom: 20px; }
+            .auth-buttons { justify-content: center; }
+            .search-row { flex-direction: column; }
+            .livres-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hero">
+        <div class="auth-area" id="authArea"></div>
+        
+        <div class="logo-container">
+            <div class="logo">🏛️</div>
+            <div class="univ-name">
+                <h1>UNIVERSITÉ NORBERT ZONGO</h1>
+                <div class="sous-titre">Koudougou — Burkina Faso</div>
+                <div class="devise">"SCIENTIA-EXCELLE UT MELIU-SERVIAS"</div>
+            </div>
+            <div class="logo">📚</div>
+        </div>
+        
+        <h2>📖 Bibliothèque Universitaire</h2>
+        <p>Plus de 10 000 ouvrages à votre disposition</p>
+    </div>
+
+    <div class="container">
+        <div class="search-section">
+            <div class="search-row">
+                <input type="text" id="searchInput" class="search-input" placeholder="🔍 Rechercher par titre, auteur ou ISBN..." onkeyup="rechercherLivres()">
+                <select id="categorieFilter" class="categorie-select" onchange="rechercherLivres()">
+                    <option value="">📁 Toutes les catégories</option>
+                    <option value="Littérature">📖 Littérature</option>
+                    <option value="Roman">📕 Roman</option>
+                    <option value="Sciences">🔬 Sciences</option>
+                    <option value="Histoire">🏛️ Histoire</option>
+                    <option value="Philosophie">💭 Philosophie</option>
+                    <option value="Informatique">💻 Informatique</option>
+                </select>
+            </div>
+            <div class="filter-buttons">
+                <button class="filter-btn active" data-dispo="tous" onclick="filtrerParDispo('tous', this)">📚 Tous les livres</button>
+                <button class="filter-btn" data-dispo="disponible" onclick="filtrerParDispo('disponible', this)">✅ Disponibles</button>
+                <button class="filter-btn" data-dispo="indisponible" onclick="filtrerParDispo('indisponible', this)">⏳ Indisponibles</button>
+            </div>
+        </div>
+
+        <div id="livresList" class="livres-grid">
+            <div style="text-align:center; padding:50px; width:100%;">📖 Chargement des livres...</div>
+        </div>
+        <div id="pagination" class="pagination"></div>
+    </div>
+
+    <div class="footer">
+        <p>© 2026 Université Norbert Zongo - Bibliothèque Centrale</p>
+        <p style="margin-top: 10px; font-size: 12px;">📍 Koudougou, Burkina Faso | 📞 (+226) 20 00 00 00 | 📧 contact@unz.bf</p>
+    </div>
+
+    <div id="authModal" class="modal">
+        <div class="modal-content">
+            <h2>🔐 Action requise</h2>
+            <p>Pour emprunter ou réserver un livre, vous devez être connecté.</p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="redirectToLogin()">🔑 Se connecter</button>
+                <button class="modal-btn modal-btn-primary-green" onclick="redirectToRegister()">📝 Créer un compte</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">✖️ Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Données des livres
+        const livresData = [
+            { id: 1, titre: "Le Petit Prince", auteur: "Antoine de Saint-Exupéry", isbn: "978-2-07-040850-4", categorie: "Littérature", disponible: true, disponibles: 3, totalExemplaires: 5, description: "Chef-d'oeuvre de la littérature française" },
+            { id: 2, titre: "1984", auteur: "George Orwell", isbn: "978-2-07-036822-8", categorie: "Roman", disponible: false, disponibles: 0, totalExemplaires: 3, description: "Roman d'anticipation" },
+            { id: 3, titre: "Les Misérables", auteur: "Victor Hugo", isbn: "978-2-01-323841-1", categorie: "Classique", disponible: true, disponibles: 2, totalExemplaires: 4, description: "Chef-d'oeuvre de Victor Hugo" },
+            { id: 4, titre: "L'Étranger", auteur: "Albert Camus", isbn: "978-2-07-036002-4", categorie: "Philosophie", disponible: true, disponibles: 1, totalExemplaires: 2, description: "Roman philosophique" },
+            { id: 5, titre: "La Peste", auteur: "Albert Camus", isbn: "978-2-07-036005-5", categorie: "Roman", disponible: false, disponibles: 0, totalExemplaires: 2, description: "Roman sur la résistance" },
+            { id: 6, titre: "Clean Code", auteur: "Robert C. Martin", isbn: "978-0-13-235088-4", categorie: "Informatique", disponible: true, disponibles: 2, totalExemplaires: 3, description: "Les bonnes pratiques du développement" }
+        ];
+
+        let livres = [...livresData];
+        let currentUser = JSON.parse(localStorage.getItem('currentUser'));
+        let filteredLivres = [...livres];
+        let currentPage = 1;
+        let itemsPerPage = 12;
+        let currentDispoFilter = 'tous';
+
+        function updateAuthArea() {
+            const authArea = document.getElementById('authArea');
+            currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            
+            if (currentUser) {
+                authArea.innerHTML = '<div class="user-info"><span>👋 ' + (currentUser.nom || currentUser.email) + '</span><button class="btn-auth btn-logout" onclick="logout()">Déconnexion</button></div>';
+            } else {
+                authArea.innerHTML = '<div class="auth-buttons"><button class="btn-auth" onclick="redirectToLogin()">🔑 Se connecter</button><button class="btn-auth" onclick="redirectToRegister()">📝 Créer un compte</button></div>';
+            }
+        }
+
+        function redirectToLogin() { window.location.href = 'pages/login.html'; }
+        function redirectToRegister() { window.location.href = 'pages/register.html'; }
+
+        function logout() {
+            localStorage.removeItem('currentUser');
+            updateAuthArea();
+            alert('Déconnecté avec succès');
+            rechercherLivres();
+        }
+
+        function rechercherLivres() {
+            let searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            let categorie = document.getElementById('categorieFilter').value;
+            
+            filteredLivres = livres.filter(function(livre) {
+                let matchSearch = livre.titre.toLowerCase().includes(searchTerm) || livre.auteur.toLowerCase().includes(searchTerm) || (livre.isbn && livre.isbn.includes(searchTerm));
+                let matchCategorie = !categorie || livre.categorie === categorie;
+                let matchDispo = currentDispoFilter === 'tous' ? true : (currentDispoFilter === 'disponible' ? livre.disponible : !livre.disponible);
+                return matchSearch && matchCategorie && matchDispo;
+            });
+            
+            currentPage = 1;
+            afficherLivres();
+        }
+
+        function filtrerParDispo(dispo, btn) {
+            currentDispoFilter = dispo;
+            let btns = document.querySelectorAll('.filter-btn');
+            for (let i = 0; i < btns.length; i++) {
+                btns[i].classList.remove('active');
+            }
+            btn.classList.add('active');
+            rechercherLivres();
+        }
+
+        function afficherLivres() {
+            let start = (currentPage - 1) * itemsPerPage;
+            let paginatedLivres = filteredLivres.slice(start, start + itemsPerPage);
+            let container = document.getElementById('livresList');
+            
+            if (paginatedLivres.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:50px; width:100%;">📖 Aucun livre ne correspond à votre recherche</div>';
+                document.getElementById('pagination').innerHTML = '';
+                return;
+            }
+            
+            let html = '';
+            for (let i = 0; i < paginatedLivres.length; i++) {
+                let livre = paginatedLivres[i];
+                let statusClass = livre.disponible ? 'disponible' : 'indisponible';
+                let statusText = livre.disponible ? '✅ Disponible' : '❌ Indisponible';
+                let btnClass = livre.disponible ? 'btn-emprunter' : 'btn-reserver';
+                let btnText = livre.disponible ? '📖 Emprunter' : '⭐ Réserver';
+                let btnAction = livre.disponible ? 'emprunter' : 'reserver';
+                
+                html += '<div class="livre-card" onclick="voirFiche(' + livre.id + ')">';
+                html += '<div class="livre-cover">📖</div>';
+                html += '<div class="livre-info">';
+                html += '<h3>' + (livre.titre.substring(0, 30)) + '</h3>';
+                html += '<p>✍️ ' + livre.auteur.substring(0, 25) + '</p>';
+                html += '<p>📁 ' + livre.categorie + '</p>';
+                html += '<p>📚 ' + livre.disponibles + '/' + livre.totalExemplaires + ' ex.</p>';
+                html += '<p><span class="' + statusClass + '">' + statusText + '</span></p>';
+                html += '<button class="btn-action ' + btnClass + '" onclick="event.stopPropagation(); verifierAuth(\'' + btnAction + '\', ' + livre.id + ')">' + btnText + '</button>';
+                html += '</div></div>';
+            }
+            container.innerHTML = html;
+            
+            let totalPages = Math.ceil(filteredLivres.length / itemsPerPage);
+            if (totalPages > 1) {
+                let paginationHtml = '';
+                for (let i = 1; i <= totalPages; i++) {
+                    let activeClass = (i === currentPage) ? 'active' : '';
+                    paginationHtml += '<button class="page-btn ' + activeClass + '" onclick="changerPage(' + i + ')">' + i + '</button>';
+                }
+                document.getElementById('pagination').innerHTML = paginationHtml;
+            } else {
+                document.getElementById('pagination').innerHTML = '';
+            }
+        }
+
+        function changerPage(page) {
+            currentPage = page;
+            afficherLivres();
+        }
+
+        function voirFiche(id) {
+            let livre = null;
+            for (let i = 0; i < livres.length; i++) {
+                if (livres[i].id === id) {
+                    livre = livres[i];
+                    break;
+                }
+            }
+            if (!livre) return;
+            alert('📖 ' + livre.titre + '\n✍️ Auteur: ' + livre.auteur + '\n📖 ISBN: ' + livre.isbn + '\n📚 Catégorie: ' + livre.categorie + '\n📝 Description: ' + livre.description + '\n📚 Disponibles: ' + livre.disponibles + '/' + livre.totalExemplaires);
+        }
+
+        let pendingAction = null;
+        let pendingLivreId = null;
+
+        function openAuthModal(action, livreId) {
+            pendingAction = action;
+            pendingLivreId = livreId;
+            document.getElementById('authModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('authModal').style.display = 'none';
+            pendingAction = null;
+            pendingLivreId = null;
+        }
+
+        function verifierAuth(action, livreId) {
+            currentUser = JSON.parse(localStorage.getItem('currentUser'));
+            if (currentUser) {
+                if (action === 'emprunter') emprunter(livreId);
+                else reserver(livreId);
+            } else {
+                openAuthModal(action, livreId);
+            }
+        }
+
+        function emprunter(id) {
+            let livre = null;
+            for (let i = 0; i < livres.length; i++) {
+                if (livres[i].id === id) {
+                    livre = livres[i];
+                    break;
+                }
+            }
+            if (!livre.disponible) {
+                alert("❌ Désolé, ce livre n'est pas disponible pour le moment");
+                return;
+            }
+            alert("✅ Demande d'emprunt envoyée pour \"" + livre.titre + "\".\n📅 Date de retour prévue: +14 jours\n📧 Un email de confirmation vous a été envoyé.");
+        }
+
+        function reserver(id) {
+            let livre = null;
+            for (let i = 0; i < livres.length; i++) {
+                if (livres[i].id === id) {
+                    livre = livres[i];
+                    break;
+                }
+            }
+            alert("⭐ Réservation enregistrée pour \"" + livre.titre + "\".\n📍 Position dans la file d'attente: 1\n📧 Vous serez notifié quand le livre sera disponible.");
+        }
+
+        updateAuthArea();
+        rechercherLivres();
+    </script>
+</body>
+</html>

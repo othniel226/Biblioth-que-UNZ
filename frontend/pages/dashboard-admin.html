@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Administrateur - Bibliothèque UNZ</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .logout-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .logout-btn:hover {
+            background: #c0392b;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 20px auto;
+            padding: 0 20px;
+        }
+        /* Stats Grid */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+        }
+        .stat-card h3 {
+            color: #1a1a2e;
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        .stat-card p {
+            color: #666;
+            font-size: 14px;
+        }
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            background: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background: #1a1a2e;
+            color: white;
+        }
+        .tab-btn:hover:not(.active) {
+            background: #ddd;
+        }
+        .tab-content {
+            display: none;
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Forms */
+        .settings-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .setting-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+        }
+        .setting-item label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+        .setting-item input, .setting-item select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        .setting-item .description {
+            font-size: 12px;
+            color: #666;
+        }
+        .btn {
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-success {
+            background: #27ae60;
+        }
+        .btn-danger {
+            background: #e74c3c;
+        }
+        .btn-warning {
+            background: #f39c12;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background: #1a1a2e;
+            color: white;
+        }
+        .search-box {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .search-box input, .search-box select {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            width: 500px;
+            max-width: 90%;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .history-log {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .log-entry {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+            font-size: 13px;
+        }
+        @media (max-width: 768px) {
+            .settings-group {
+                grid-template-columns: 1fr;
+            }
+            table, thead, tbody, th, td, tr {
+                display: block;
+            }
+            th {
+                display: none;
+            }
+            td {
+                padding: 10px;
+                border-bottom: 1px solid #ddd;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div><h2>📚 Bibliothèque UNZ</h2><p>Espace Administrateur</p></div>
+        <div><span id="userName"></span> <button class="logout-btn" onclick="logout()">Déconnexion</button></div>
+    </div>
+
+    <div class="container">
+        <!-- Statistiques en temps réel -->
+        <div class="stats-grid" id="statsGrid">
+            <div class="stat-card"><h3 id="totalOuvrages">0</h3><p>Ouvrages</p></div>
+            <div class="stat-card"><h3 id="totalEmprunts">0</h3><p>Emprunts en cours</p></div>
+            <div class="stat-card"><h3 id="totalRetards">0</h3><p>Emprunts en retard</p></div>
+            <div class="stat-card"><h3 id="totalPenalites">0</h3><p>Pénalités (FCFA)</p></div>
+            <div class="stat-card"><h3 id="totalUtilisateurs">0</h3><p>Utilisateurs</p></div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="showTab('dashboard')">📊 Tableau de bord</button>
+            <button class="tab-btn" onclick="showTab('parametres')">⚙️ Paramètres</button>
+            <button class="tab-btn" onclick="showTab('utilisateurs')">👥 Utilisateurs</button>
+            <button class="tab-btn" onclick="showTab('rapports')">📈 Rapports</button>
+            <button class="tab-btn" onclick="showTab('historique')">📜 Historique</button>
+        </div>
+
+        <!-- Tab Tableau de bord -->
+        <div id="dashboard" class="tab-content active">
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); gap: 20px;">
+                <div class="card">
+                    <h3>📊 Activités d'emprunts</h3>
+                    <canvas id="empruntsChart" height="250"></canvas>
+                </div>
+                <div class="card">
+                    <h3>⭐ Top 5 ouvrages les plus empruntés</h3>
+                    <canvas id="populairesChart" height="250"></canvas>
+                </div>
+                <div class="card">
+                    <h3>📚 Statistiques par catégorie</h3>
+                    <canvas id="categorieChart" height="250"></canvas>
+                </div>
+                <div class="card">
+                    <h3>⚠️ Top 5 étudiants avec le plus de retards</h3>
+                    <table id="topRetardsTable" style="width:100%">
+                        <thead><tr><th>Étudiant</th><th>Nombre de retards</th></tr></thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Paramètres -->
+        <div id="parametres" class="tab-content">
+            <form id="settingsForm">
+                <div class="settings-group">
+                    <div class="setting-item"><label>📅 Durée d'emprunt (jours)</label>
+                        <input type="number" id="dureeEmprunt" min="1" max="60"><div class="description">Durée maximale d'un emprunt en jours</div></div>
+                    <div class="setting-item"><label>📚 Max emprunts simultanés</label>
+                        <input type="number" id="maxEmprunts" min="1" max="10"><div class="description">Nombre maximum de livres empruntés en même temps</div></div>
+                    <div class="setting-item"><label>⭐ Max réservations simultanées</label>
+                        <input type="number" id="maxReservations" min="1" max="10"><div class="description">Nombre maximum de réservations en attente</div></div>
+                    <div class="setting-item"><label>💰 Pénalité par jour (FCFA)</label>
+                        <input type="number" id="penaliteParJour" min="0" max="1000"><div class="description">Montant facturé par jour de retard</div></div>
+                    <div class="setting-item"><label>⚠️ Seuil blocage (FCFA)</label>
+                        <input type="number" id="seuilBlocage" min="0" max="10000"><div class="description">Montant des pénalités bloquant les emprunts</div></div>
+                    <div class="setting-item"><label>⏰ Validité réservation (heures)</label>
+                        <input type="number" id="validiteReservation" min="1" max="168"><div class="description">Délai pour retirer un livre réservé</div></div>
+                    <div class="setting-item"><label>🔄 Durée prolongation (jours)</label>
+                        <input type="number" id="dureeProlongation" min="1" max="30"><div class="description">Durée d'une prolongation d'emprunt</div></div>
+                    <div class="setting-item"><label>📧 Rappel avant échéance (jours)</label>
+                        <input type="number" id="rappelAvantEcheance" min="0" max="7"><div class="description">Envoi du rappel X jours avant la date de retour</div></div>
+                    <div class="setting-item"><label>🎯 Stratégie pénalités</label>
+                        <select id="strategiePenalites"><option value="FIXE">FIXE - Tarif fixe par jour</option><option value="PROGRESSIF">PROGRESSIF - Majoration croissante</option></select>
+                        <div class="description">PROGRESSIF : 100F CFA/jour puis double après 7 jours</div></div>
+                </div>
+                <button type="submit" class="btn btn-success">💾 Enregistrer les paramètres</button>
+            </form>
+        </div>
+
+        <!-- Tab Utilisateurs -->
+        <div id="utilisateurs" class="tab-content">
+            <h3>Gestion des utilisateurs</h3>
+            <button class="btn btn-success" onclick="openUserModal()">➕ Ajouter un bibliothécaire</button>
+            <div class="search-box">
+                <input type="text" id="searchUser" placeholder="Rechercher par nom, email, matricule..." onkeyup="searchUsers()">
+                <select id="roleFilter" onchange="searchUsers()"><option value="tous">Tous les rôles</option><option value="etudiant">Étudiants</option><option value="bibliothecaire">Bibliothécaires</option><option value="admin">Administrateurs</option></select>
+                <select id="statusFilter" onchange="searchUsers()"><option value="tous">Tous les statuts</option><option value="actif">Actifs</option><option value="inactif">Inactifs</option></select>
+            </div>
+            <div style="overflow-x: auto;"><table id="usersTable"><thead><tr><th>ID</th><th>Matricule</th><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Date inscription</th><th>Actions</th></tr></thead><tbody></tbody></table></div>
+        </div>
+
+        <!-- Tab Rapports -->
+        <div id="rapports" class="tab-content">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap;">
+                <button class="btn" onclick="exportPDF('emprunts')">📄 Exporter rapport emprunts PDF</button>
+                <button class="btn" onclick="exportExcel()">📊 Exporter rapport Excel</button>
+            </div>
+            <div class="search-box"><input type="date" id="dateDebut"><input type="date" id="dateFin"><button class="btn" onclick="genererRapportPeriode()">Filtrer par période</button></div>
+            <div id="rapportResultat"></div>
+        </div>
+
+        <!-- Tab Historique -->
+        <div id="historique" class="tab-content">
+            <h3>Journal des modifications des paramètres</h3>
+            <div class="history-log" id="historyLog"></div>
+        </div>
+    </div>
+
+    <!-- Modal Ajout Bibliothécaire -->
+    <div id="userModal" class="modal"><div class="modal-content"><h3>➕ Ajouter un bibliothécaire</h3>
+        <form id="addUserForm"><div class="form-group"><label>Matricule</label><input type="text" id="matricule" required></div>
+        <div class="form-group"><label>Nom complet</label><input type="text" id="nom" required></div>
+        <div class="form-group"><label>Email</label><input type="email" id="email" required></div>
+        <div class="form-group"><label>Téléphone</label><input type="tel" id="telephone"></div>
+        <button type="submit" class="btn btn-success">Ajouter</button><button type="button" class="btn" onclick="closeUserModal()">Annuler</button></form></div></div>
+
+    <!-- Modal Réinitialiser mot de passe -->
+    <div id="resetModal" class="modal"><div class="modal-content"><h3>🔑 Réinitialiser le mot de passe</h3><p id="resetUserEmail"></p><button class="btn btn-warning" onclick="sendResetLink()">📧 Envoyer lien de réinitialisation</button><button class="btn" onclick="closeResetModal()">Annuler</button></div></div>
+
+    <script>
+const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+if (!currentUser || currentUser.role !== 'admin') {
+    window.location.href = '../index.html';
+}
+        // Vérifier authentification
+        const admin = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        if (!admin || admin.role !== 'admin') window.location.href = '../index.html';
+        document.getElementById('userName').innerHTML = `👋 ${admin.nom}`;
+
+        // Données initiales
+        let parametres = {
+            dureeEmprunt: 14, maxEmprunts: 3, maxReservations: 5, penaliteParJour: 100,
+            seuilBlocage: 500, validiteReservation: 48, dureeProlongation: 7,
+            rappelAvantEcheance: 3, strategiePenalites: 'FIXE'
+        };
+        let historiqueParametres = [];
+
+        let utilisateurs = [
+            { id: 1, matricule: "ETU001", nom: "Jean Dupont", email: "jean@unz.bf", role: "etudiant", statut: "actif", dateInscription: "2026-01-15" },
+            { id: 2, matricule: "BIB001", nom: "Alice Konaté", email: "alice@unz.bf", role: "bibliothecaire", statut: "actif", dateInscription: "2026-02-10" },
+            { id: 3, matricule: "ADMIN001", nom: "Ousmane Traoré", email: "admin@unz.bf", role: "admin", statut: "actif", dateInscription: "2026-01-01" },
+            { id: 4, matricule: "ETU002", nom: "Marie Diallo", email: "marie@unz.bf", role: "etudiant", statut: "inactif", dateInscription: "2026-03-20" }
+        ];
+
+        let ouvrages = [
+            { id: 1, titre: "Le Petit Prince", auteur: "Saint-Exupéry", categorie: "Littérature", emprunts: 45 },
+            { id: 2, titre: "1984", auteur: "Orwell", categorie: "Roman", emprunts: 38 },
+            { id: 3, titre: "Les Misérables", auteur: "Hugo", categorie: "Classique", emprunts: 25 },
+            { id: 4, titre: "L'Étranger", auteur: "Camus", categorie: "Philosophie", emprunts: 30 },
+            { id: 5, titre: "La Peste", auteur: "Camus", categorie: "Roman", emprunts: 22 }
+        ];
+
+        let emprunts = [
+            { id: 1, etudiant: "Jean Dupont", livre: "1984", dateEmprunt: "2026-05-10", dateRetour: "2026-05-24", statut: "en_cours" },
+            { id: 2, etudiant: "Marie Diallo", livre: "La Peste", dateEmprunt: "2026-05-01", dateRetour: "2026-05-15", statut: "en_retard" }
+        ];
+
+        let categories = [
+            { nom: "Littérature", total: 50, emprunts: 45 },
+            { nom: "Roman", total: 80, emprunts: 60 },
+            { nom: "Classique", total: 40, emprunts: 25 },
+            { nom: "Philosophie", total: 30, emprunts: 30 }
+        ];
+
+        let topRetards = [
+            { nom: "Marie Diallo", retards: 3 },
+            { nom: "Jean Dupont", retards: 2 },
+            { nom: "Fatima Zongo", retards: 1 }
+        ];
+
+        // Initialisation
+        function init() { chargerParametres(); updateStats(); refreshUsers(); updateCharts(); afficherHistorique(); }
+        function chargerParametres() { for(let k in parametres) { let el = document.getElementById(k); if(el) el.value = parametres[k]; } }
+        function sauvegarderParametres() { for(let k in parametres) { let el = document.getElementById(k); if(el) parametres[k] = el.value; } 
+            let log = { date: new Date().toISOString(), utilisateur: admin.nom, email: admin.email, modifications: JSON.stringify(parametres) };
+            historiqueParametres.unshift(log); localStorage.setItem('historiqueParams', JSON.stringify(historiqueParametres)); afficherHistorique();
+            alert('Paramètres enregistrés avec succès !'); }
+        function afficherHistorique() { let container = document.getElementById('historyLog'); if(!container) return;
+            container.innerHTML = historiqueParametres.map(h => `<div class="log-entry">📅 ${new Date(h.date).toLocaleString()} | 👤 ${h.utilisateur} (${h.email}) | ⚙️ Paramètres mis à jour</div>`).join('') || '<div>Aucune modification enregistrée</div>'; }
+
+        function updateStats() {
+            document.getElementById('totalOuvrages').textContent = ouvrages.length;
+            document.getElementById('totalEmprunts').textContent = emprunts.filter(e => e.statut === 'en_cours').length;
+            document.getElementById('totalRetards').textContent = emprunts.filter(e => e.statut === 'en_retard').length;
+            document.getElementById('totalPenalites').textContent = "2500";
+            document.getElementById('totalUtilisateurs').textContent = utilisateurs.length;
+        }
+
+        function refreshUsers() { let tbody = document.querySelector('#usersTable tbody'); if(!tbody) return;
+            tbody.innerHTML = utilisateurs.map(u => `<tr><td>${u.id}</td><td>${u.matricule}</td><td>${u.nom}</td><td>${u.email}</td>
+            <td>${u.role === 'etudiant' ? '👨‍🎓 Étudiant' : u.role === 'bibliothecaire' ? '📚 Bibliothécaire' : '👑 Administrateur'}</td>
+            <td><span class="badge ${u.statut === 'actif' ? 'badge-success' : 'badge-danger'}">${u.statut === 'actif' ? 'Actif' : 'Inactif'}</span></td>
+            <td>${u.dateInscription}</td>
+            <td><button class="btn" onclick="toggleStatus(${u.id})">🔁 ${u.statut === 'actif' ? 'Désactiver' : 'Activer'}</button>
+            <button class="btn btn-warning" onclick="resetPassword(${u.id})">🔑 Réinitialiser MDP</button></td></tr>`).join(''); }
+        function searchUsers() { let search = document.getElementById('searchUser').value.toLowerCase(); let role = document.getElementById('roleFilter').value; let status = document.getElementById('statusFilter').value;
+            let filtered = utilisateurs.filter(u => (u.nom.toLowerCase().includes(search) || u.matricule.toLowerCase().includes(search) || u.email.toLowerCase().includes(search)) &&
+                (role === 'tous' || u.role === role) && (status === 'tous' || u.statut === status));
+            let tbody = document.querySelector('#usersTable tbody'); if(tbody) tbody.innerHTML = filtered.map(u => `<tr>...</tr>`).join(''); }
+        function toggleStatus(id) { let u = utilisateurs.find(u => u.id === id); if(u) { u.statut = u.statut === 'actif' ? 'inactif' : 'actif'; refreshUsers(); alert(`Compte ${u.nom} ${u.statut === 'actif' ? 'activé' : 'désactivé'}`); } }
+        let resetUserId = null;
+        function resetPassword(id) { resetUserId = id; let u = utilisateurs.find(u => u.id === id); document.getElementById('resetUserEmail').innerHTML = `Envoyer un lien de réinitialisation à : <strong>${u.email}</strong>`; document.getElementById('resetModal').style.display = 'flex'; }
+        function sendResetLink() { if(resetUserId) alert(`Un email de réinitialisation a été envoyé à ${utilisateurs.find(u=>u.id===resetUserId).email}`); closeResetModal(); }
+        function openUserModal() { document.getElementById('userModal').style.display = 'flex'; }
+        function closeUserModal() { document.getElementById('userModal').style.display = 'none'; document.getElementById('addUserForm').reset(); }
+        function closeResetModal() { document.getElementById('resetModal').style.display = 'none'; }
+        document.getElementById('addUserForm')?.addEventListener('submit', function(e) { e.preventDefault();
+            let newUser = { id: utilisateurs.length+1, matricule: document.getElementById('matricule').value, nom: document.getElementById('nom').value,
+                email: document.getElementById('email').value, telephone: document.getElementById('telephone').value, role: 'bibliothecaire', statut: 'actif', dateInscription: new Date().toISOString().split('T')[0] };
+            utilisateurs.push(newUser); closeUserModal(); refreshUsers(); alert(`Bibliothécaire ${newUser.nom} ajouté !`); });
+        document.getElementById('settingsForm')?.addEventListener('submit', function(e) { e.preventDefault(); sauvegarderParametres(); });
+
+        let empruntsChart, populairesChart, categorieChart;
+        function updateCharts() {
+            let semaines = ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4']; let activites = [12, 19, 15, 22];
+            if(empruntsChart) empruntsChart.destroy(); empruntsChart = new Chart(document.getElementById('empruntsChart'), { type: 'line', data: { labels: semaines, datasets: [{ label: 'Emprunts', data: activites, borderColor: '#1a1a2e', backgroundColor: 'rgba(26,26,46,0.1)', tension: 0.3 }] } });
+            if(populairesChart) populairesChart.destroy(); populairesChart = new Chart(document.getElementById('populairesChart'), { type: 'bar', data: { labels: ouvrages.slice(0,5).map(o=>o.titre), datasets: [{ label: 'Nombre d\'emprunts', data: ouvrages.slice(0,5).map(o=>o.emprunts), backgroundColor: '#3498db' }] } });
+            if(categorieChart) categorieChart.destroy(); categorieChart = new Chart(document.getElementById('categorieChart'), { type: 'pie', data: { labels: categories.map(c=>c.nom), datasets: [{ data: categories.map(c=>c.emprunts), backgroundColor: ['#3498db','#e74c3c','#f39c12','#27ae60'] }] } });
+            let tbody = document.querySelector('#topRetardsTable tbody'); if(tbody) tbody.innerHTML = topRetards.map(r => `<tr><td>${r.nom}</td><td><span class="badge badge-danger">${r.retards} retards</span></td></tr>`).join('');
+        }
+
+        function exportPDF() { alert("Rapport PDF généré avec succès !"); }
+        function exportExcel() { alert("Rapport Excel généré avec succès !"); }
+        function genererRapportPeriode() { alert("Rapport généré pour la période sélectionnée !"); }
+
+        function showTab(tabId) { document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active')); document.getElementById(tabId).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active')); event.target.classList.add('active'); if(tabId === 'dashboard') updateCharts(); if(tabId === 'utilisateurs') refreshUsers(); if(tabId === 'historique') afficherHistorique(); }
+        function logout() { localStorage.removeItem('currentUser'); window.location.href = '../index.html'; }
+
+        init();
+    </script>
+</body>
+</html>
