@@ -1,48 +1,41 @@
 spring:
   application:
     name: bibliotheque-unz
-
   datasource:
-    url: jdbc:mysql://localhost:3306/bibliotheque_unz?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Africa/Abidjan&characterEncoding=UTF-8
-    username: root
-    password: root
-    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
+      maximum-pool-size: 5
+      minimum-idle: 1
       connection-timeout: 30000
       pool-name: BiblioHikariPool
-
   jpa:
     hibernate:
-      ddl-auto: validate
+      ddl-auto: update
     show-sql: false
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 20
-        hbm2ddl:
-          halt_on_error: false
-
   thymeleaf:
     encoding: UTF-8
     mode: HTML
     cache: false
     prefix: classpath:/templates/
     suffix: .html
-
   mail:
     host: smtp.gmail.com
     port: 587
     username: bibliotheque.unz@gmail.com
-    password:
+    password: ${MAIL_PASSWORD:}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
       mail.smtp.starttls.required: true
     default-encoding: UTF-8
-
   servlet:
     multipart:
       enabled: true
@@ -53,12 +46,12 @@ app:
   jwt:
     secret: bibliothequeUNZCleSuperSecreteChangerEnProd2026!!
     expiration-ms: 86400000
-  base-url: http://localhost:8081
+  base-url: ${APP_BASE_URL:https://biblioth-que-unz.onrender.com}
   bibliotheque:
     penalite-par-jour-fcfa: 100
 
 server:
-  port: 8081
+  port: ${PORT:8080}
   servlet:
     encoding:
       charset: UTF-8
@@ -76,8 +69,8 @@ springdoc:
 
 logging:
   level:
-    com.unz.bibliotheque: DEBUG
-    org.springframework.security: DEBUG
-    org.hibernate.SQL: DEBUG
+    com.unz.bibliotheque: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
   pattern:
     console: "%d{dd/MM/yyyy HH:mm:ss} [%thread] %-5level %logger{30} - %msg%n"
