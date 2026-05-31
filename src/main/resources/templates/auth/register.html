@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Créer un compte — Bibliothèque UNZ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg,#1a237e 0%,#3949ab 100%); min-height: 100vh; display: flex; align-items: center; padding: 20px 0; }
+        .register-card { border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .brand-icon { width: 64px; height: 64px; background: linear-gradient(135deg,#1a237e,#3949ab); border-radius: 16px; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+        .form-control { border-radius: 10px; padding: 12px 16px; border: 1.5px solid #e0e0e0; }
+        .form-control:focus { border-color: #3949ab; box-shadow: 0 0 0 3px rgba(57,73,171,0.15); }
+        .btn-register { background: linear-gradient(135deg,#1a237e,#3949ab); border: none; border-radius: 10px; padding: 12px; font-weight: 600; }
+        .btn-register:hover { opacity: 0.92; transform: translateY(-1px); }
+        .section-title { font-size: 13px; font-weight: 700; text-transform: uppercase; color: #3949ab; letter-spacing: 1px; margin-bottom: 12px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-7 col-lg-6">
+            <div class="card register-card border-0">
+                <div class="card-body p-5">
+                    <!-- Logo -->
+                    <div class="brand-icon">
+                        <i class="fas fa-book-open fa-2x text-white"></i>
+                    </div>
+                    <h4 class="text-center fw-bold text-primary mb-1">Créer un compte</h4>
+                    <p class="text-center text-muted small mb-4">Bibliothèque UNZ — Université Norbert Zongo</p>
+
+                    <!-- Messages -->
+                    <div th:if="${success}" class="alert alert-success">
+                        <i class="fas fa-check-circle me-2"></i>
+                        <span th:text="${success}"></span>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <span th:text="${error}"></span>
+                    </div>
+
+                    <!-- Formulaire -->
+                    <form th:action="@{/auth/register}" method="post">
+
+                        <!-- Section identité -->
+                        <div class="section-title">Identité</div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Prénom *</label>
+                                <input type="text" name="prenom" class="form-control"
+                                       placeholder="Moussa" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold small">Nom *</label>
+                                <input type="text" name="nom" class="form-control"
+                                       placeholder="Ouédraogo" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Adresse email universitaire *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-envelope text-muted"></i></span>
+                                <input type="text" name="email" class="form-control"
+                                       placeholder="prenom.nom@etud.unz.bf" required>
+                            </div>
+                        </div>
+
+                        <!-- Section académique -->
+                        <div class="section-title mt-3">Informations académiques</div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Matricule étudiant *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-id-card text-muted"></i></span>
+                                <input type="text" name="matricule" class="form-control"
+                                       placeholder="Ex: 2024INF001" required>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-7">
+                                <label class="form-label fw-semibold small">Filière *</label>
+                                <select name="filiere" class="form-select" required>
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Informatique">Informatique</option>
+                                    <option value="Mathématiques">Mathématiques</option>
+                                    <option value="Physique">Physique</option>
+                                    <option value="Chimie">Chimie</option>
+                                    <option value="Biologie">Biologie</option>
+                                    <option value="Économie">Économie</option>
+                                    <option value="Droit">Droit</option>
+                                    <option value="Lettres">Lettres</option>
+                                    <option value="Histoire">Histoire</option>
+                                    <option value="Géographie">Géographie</option>
+                                    <option value="Sociologie">Sociologie</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold small">Niveau *</label>
+                                <select name="niveau" class="form-select" required>
+                                    <option value="">Niveau...</option>
+                                    <option value="L1">L1</option>
+                                    <option value="L2">L2</option>
+                                    <option value="L3">L3</option>
+                                    <option value="M1">M1</option>
+                                    <option value="M2">M2</option>
+                                    <option value="D">Doctorat</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Section mot de passe -->
+                        <div class="section-title mt-3">Sécurité</div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold small">Mot de passe *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                                <input type="password" name="motDePasse" id="mdp" class="form-control"
+                                       placeholder="Min. 6 caractères" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold small">Confirmer le mot de passe *</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light"><i class="fas fa-lock text-muted"></i></span>
+                                <input type="password" name="confirmMotDePasse" id="mdpConfirm" class="form-control"
+                                       placeholder="Répéter le mot de passe" required>
+                            </div>
+                            <div id="mdpError" class="text-danger small mt-1 d-none">
+                                Les mots de passe ne correspondent pas.
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-register btn-primary w-100 text-white" id="btnRegister">
+                            <i class="fas fa-user-plus me-2"></i>Créer mon compte
+                        </button>
+                    </form>
+
+                    <p class="text-center text-muted small mt-3 mb-0">
+                        Déjà inscrit ?
+                        <a href="/auth/login" class="text-primary fw-semibold">Se connecter</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+// Vérification mots de passe côté client
+document.getElementById('btnRegister').addEventListener('click', function(e) {
+    const mdp = document.getElementById('mdp').value;
+    const confirm = document.getElementById('mdpConfirm').value;
+    const errEl = document.getElementById('mdpError');
+    if (mdp !== confirm) {
+        e.preventDefault();
+        errEl.classList.remove('d-none');
+    } else {
+        errEl.classList.add('d-none');
+    }
+});
+</script>
+</body>
+</html>

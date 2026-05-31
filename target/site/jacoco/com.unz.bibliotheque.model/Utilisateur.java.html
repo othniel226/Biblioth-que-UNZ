@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Utilisateur.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">Utilisateur.java</span></div><h1>Utilisateur.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import com.unz.bibliotheque.model.enums.Role;
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import java.time.LocalDateTime;
+
+/**
+ * Entité abstraite représentant un utilisateur du système.
+ * Héritage JPA JOINED avec @DiscriminatorColumn.
+ *
+ * CORRECTION IMPORTANTE :
+ * @DiscriminatorColumn est nécessaire pour que Hibernate sache
+ * quel type concret instancier (Etudiant, Bibliothecaire, Administrateur)
+ * lors d'une requête sur la table utilisateurs.
+ * Sans cette annotation : erreur &quot;Cannot instantiate abstract class&quot;
+ */
+@Entity
+@Table(name = &quot;utilisateurs&quot;)
+@Inheritance(strategy = InheritanceType.JOINED)
+@DiscriminatorColumn(name = &quot;dtype&quot;, discriminatorType = DiscriminatorType.STRING)
+@Getter
+<span class="pc" id="L24">@Setter</span>
+<span class="fc" id="L25">@NoArgsConstructor</span>
+<span class="nc" id="L26">@AllArgsConstructor</span>
+public abstract class Utilisateur {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="fc" id="L31">    private Long id;</span>
+
+    @NotBlank(message = &quot;Le prénom est obligatoire&quot;)
+    @Size(max = 100)
+    @Column(nullable = false, length = 100)
+<span class="fc" id="L36">    private String prenom;</span>
+
+    @NotBlank(message = &quot;Le nom est obligatoire&quot;)
+    @Size(max = 100)
+    @Column(nullable = false, length = 100)
+<span class="fc" id="L41">    private String nom;</span>
+
+    @NotBlank(message = &quot;L'email est obligatoire&quot;)
+    @Email(message = &quot;Format d'email invalide&quot;)
+    @Column(nullable = false, unique = true, length = 150)
+<span class="fc" id="L46">    private String email;</span>
+
+    @NotBlank(message = &quot;Le mot de passe est obligatoire&quot;)
+    @Column(name = &quot;mot_de_passe&quot;, nullable = false)
+<span class="nc" id="L50">    private String motDePasse;</span>
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+<span class="fc" id="L54">    private Role role;</span>
+
+<span class="pc" id="L56">    @Column(nullable = false)</span>
+<span class="pc" id="L57">    private Boolean actif = true;</span>
+
+    @Column(nullable = false, updatable = false)
+<span class="nc" id="L60">    private LocalDateTime dateCreation;</span>
+
+    @Column
+<span class="nc" id="L63">    private LocalDateTime dateModification;</span>
+
+    @PrePersist
+    protected void onCreate() {
+<span class="fc" id="L67">        dateCreation = LocalDateTime.now();</span>
+<span class="fc" id="L68">        dateModification = LocalDateTime.now();</span>
+<span class="fc" id="L69">    }</span>
+
+    @PreUpdate
+    protected void onUpdate() {
+<span class="nc" id="L73">        dateModification = LocalDateTime.now();</span>
+<span class="nc" id="L74">    }</span>
+
+    public String getNomComplet() {
+<span class="fc" id="L77">        return prenom + &quot; &quot; + nom;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

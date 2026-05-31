@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Ouvrage.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">Ouvrage.java</span></div><h1>Ouvrage.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import jakarta.persistence.*;
+import jakarta.validation.constraints.*;
+import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Entité représentant un titre (ouvrage) dans le catalogue de la bibliothèque.
+ * Un ouvrage peut avoir plusieurs exemplaires physiques ({@link Exemplaire}).
+ *
+ * Distinction importante :
+ *   - Ouvrage = la notice bibliographique (titre, auteur, ISBN)
+ *   - Exemplaire = un exemplaire physique avec un code-barres unique
+ */
+@Entity
+@Table(name = &quot;ouvrages&quot;)
+<span class="pc" id="L19">@Getter @Setter @NoArgsConstructor @AllArgsConstructor</span>
+public class Ouvrage {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L24">    private Long id;</span>
+
+    /** Titre complet de l'ouvrage */
+    @NotBlank(message = &quot;Le titre est obligatoire&quot;)
+    @Size(max = 300)
+    @Column(nullable = false, length = 300)
+<span class="fc" id="L30">    private String titre;</span>
+
+    /** ISBN-13 de l'ouvrage (unique dans le catalogue) */
+    @Column(unique = true, length = 20)
+<span class="nc" id="L34">    private String isbn;</span>
+
+    /** Nom(s) de l'auteur ou des auteurs */
+    @NotBlank(message = &quot;L'auteur est obligatoire&quot;)
+    @Size(max = 200)
+    @Column(nullable = false, length = 200)
+<span class="fc" id="L40">    private String auteur;</span>
+
+    /** Maison d'édition */
+    @Column(length = 150)
+<span class="nc" id="L44">    private String editeur;</span>
+
+    /** Année de publication */
+    @Column
+<span class="nc" id="L48">    private Integer anneePublication;</span>
+
+    /** Description ou résumé de l'ouvrage */
+    @Column(columnDefinition = &quot;TEXT&quot;)
+<span class="nc" id="L52">    private String description;</span>
+
+    /** URL de l'image de couverture (optionnel) */
+    @Column(length = 500)
+<span class="nc" id="L56">    private String imageCouverture;</span>
+
+    /** Catégorie thématique de l'ouvrage */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = &quot;categorie_id&quot;)
+<span class="nc" id="L61">    private Categorie categorie;</span>
+
+    /**
+     * Indique si l'ouvrage est archivé (retiré du catalogue actif).
+     * Un ouvrage archivé n'est plus disponible à l'emprunt mais reste visible
+     * dans l'historique.
+     */
+<span class="pc" id="L68">    @Column(nullable = false)</span>
+<span class="pc" id="L69">    private Boolean archive = false;</span>
+
+    /** Liste des exemplaires physiques de cet ouvrage */
+<span class="pc" id="L72">    @OneToMany(mappedBy = &quot;ouvrage&quot;, cascade = CascadeType.ALL, fetch = FetchType.LAZY)</span>
+<span class="fc" id="L73">    private List&lt;Exemplaire&gt; exemplaires = new ArrayList&lt;&gt;();</span>
+
+    /**
+     * Vérifie s'il existe au moins un exemplaire disponible à l'emprunt.
+     *
+     * @return true si au moins un exemplaire est DISPONIBLE
+     */
+    public boolean estDisponible() {
+<span class="fc" id="L81">        return exemplaires.stream()</span>
+<span class="fc" id="L82">            .anyMatch(e -&gt; e.getStatut().name().equals(&quot;DISPONIBLE&quot;));</span>
+    }
+
+    /**
+     * Retourne le nombre d'exemplaires disponibles à l'emprunt.
+     *
+     * @return nombre d'exemplaires avec statut DISPONIBLE
+     */
+    public long getNombreExemplairesDisponibles() {
+<span class="fc" id="L91">        return exemplaires.stream()</span>
+<span class="fc" id="L92">            .filter(e -&gt; e.getStatut().name().equals(&quot;DISPONIBLE&quot;))</span>
+<span class="fc" id="L93">            .count();</span>
+    }
+
+    /**
+     * Retourne le premier exemplaire disponible (pour les emprunts).
+     *
+     * @return premier exemplaire DISPONIBLE, ou null si aucun
+     */
+    public Exemplaire getPremierExemplaireDisponible() {
+<span class="fc" id="L102">        return exemplaires.stream()</span>
+<span class="fc" id="L103">            .filter(e -&gt; e.getStatut().name().equals(&quot;DISPONIBLE&quot;))</span>
+<span class="fc" id="L104">            .findFirst()</span>
+<span class="fc" id="L105">            .orElse(null);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

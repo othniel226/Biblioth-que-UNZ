@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.unz.bibliotheque.model.ModelTest$StatutEmpruntTest
+-------------------------------------------------------------------------------
+Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.227 s -- in com.unz.bibliotheque.model.ModelTest$StatutEmpruntTest

@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  thymeleaf:
+    mode: HTML
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  mail:
+    host: localhost
+    port: 25
+    username: test
+    password: test
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+app:
+  jwt:
+    secret: testSecretKeyForJUnitTestsOnly123456789012345
+    expiration-ms: 86400000
+  base-url: http://localhost:8080
+  bibliotheque:
+    penalite-par-jour-fcfa: 100

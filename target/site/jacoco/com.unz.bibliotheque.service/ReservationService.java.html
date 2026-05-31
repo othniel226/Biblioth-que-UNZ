@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>ReservationService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.service</a> &gt; <span class="el_source">ReservationService.java</span></div><h1>ReservationService.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.service;
+
+import com.unz.bibliotheque.exception.*;
+import com.unz.bibliotheque.model.*;
+import com.unz.bibliotheque.model.enums.*;
+import com.unz.bibliotheque.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.event.EventListener;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import com.unz.bibliotheque.event.ExemplaireRetourneEvent;
+import java.util.List;
+
+/**
+ * Service métier pour la gestion des réservations.
+ *
+ * Gère la file FIFO (Premier Arrivé, Premier Servi) des réservations.
+ * Quand un exemplaire est rendu, le prochain étudiant dans la file
+ * est notifié automatiquement via le Pattern Observer.
+ */
+@Service
+@Transactional
+<span class="fc" id="L24">@RequiredArgsConstructor</span>
+<span class="fc" id="L25">@Slf4j</span>
+public class ReservationService {
+
+    private final ReservationRepository reservationRepo;
+    private final OuvrageRepository     ouvrageRepo;
+    private final EtudiantRepository    etudiantRepo;
+    private final ExemplaireRepository  exemplaireRepo;
+    private final ConfigurationService  configService;
+    private final NotificationService   notificationService;
+
+    /**
+     * Crée une réservation pour un ouvrage indisponible.
+     *
+     * Règles :
+     *   - L'ouvrage doit être indisponible (sinon emprunter directement)
+     *   - L'étudiant ne doit pas déjà avoir une réservation active pour cet ouvrage
+     *   - Le quota de réservations simultanées ne doit pas être dépassé
+     *
+     * @param etudiantId identifiant de l'étudiant
+     * @param ouvrageId  identifiant de l'ouvrage à réserver
+     * @return la réservation créée
+     */
+    public Reservation creerReservation(Long etudiantId, Long ouvrageId) {
+<span class="fc" id="L48">        Ouvrage ouvrage = ouvrageRepo.findById(ouvrageId)</span>
+<span class="fc" id="L49">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Ouvrage introuvable.&quot;));</span>
+
+<span class="fc" id="L51">        Etudiant etudiant = etudiantRepo.findById(etudiantId)</span>
+<span class="fc" id="L52">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Étudiant introuvable.&quot;));</span>
+
+        // Vérifier que l'ouvrage est bien indisponible
+<span class="fc bfc" id="L55" title="All 2 branches covered.">        if (ouvrage.estDisponible()) {</span>
+<span class="fc" id="L56">            throw new BusinessException(</span>
+<span class="fc" id="L57">                ouvrage.getNombreExemplairesDisponibles() + &quot; exemplaire(s) disponible(s). &quot;</span>
+                + &quot;Empruntez directement plutôt que de réserver !&quot;
+            );
+        }
+
+        // Vérifier l'absence de doublon de réservation
+<span class="fc bfc" id="L63" title="All 2 branches covered.">        if (reservationRepo.countActiveByEtudiantAndOuvrage(etudiantId, ouvrageId) &gt; 0) {</span>
+<span class="fc" id="L64">            throw new BusinessException(&quot;Vous avez déjà une réservation active pour cet ouvrage.&quot;);</span>
+        }
+
+        // Vérifier le quota de réservations
+<span class="fc" id="L68">        int maxReserv = configService.getMaxReservationsSimultanes();</span>
+<span class="fc" id="L69">        long nbActives = reservationRepo.findByEtudiantIdAndStatutIn(</span>
+            etudiantId,
+<span class="fc" id="L71">            List.of(StatutReservation.EN_ATTENTE, StatutReservation.CONFIRMEE)</span>
+<span class="fc" id="L72">        ).size();</span>
+
+<span class="fc bfc" id="L74" title="All 2 branches covered.">        if (nbActives &gt;= maxReserv) {</span>
+<span class="fc" id="L75">            throw new BusinessException(</span>
+                &quot;Quota de réservations atteint (&quot; + nbActives + &quot;/&quot; + maxReserv + &quot;).&quot;
+            );
+        }
+
+<span class="fc" id="L80">        Reservation reservation = new Reservation();</span>
+<span class="fc" id="L81">        reservation.setEtudiant(etudiant);</span>
+<span class="fc" id="L82">        reservation.setOuvrage(ouvrage);</span>
+<span class="fc" id="L83">        reservation.setStatut(StatutReservation.EN_ATTENTE);</span>
+
+<span class="fc" id="L85">        Reservation saved = reservationRepo.save(reservation);</span>
+<span class="fc" id="L86">        log.info(&quot;Réservation créée : étudiant={}, ouvrage={}&quot;, etudiantId, ouvrageId);</span>
+<span class="fc" id="L87">        return saved;</span>
+    }
+
+    /**
+     * Annule une réservation existante.
+     * L'étudiant ne peut annuler que ses propres réservations.
+     *
+     * @param reservationId identifiant de la réservation
+     * @param etudiantId    identifiant de l'étudiant demandeur
+     */
+    public void annulerReservation(Long reservationId, Long etudiantId) {
+<span class="fc" id="L98">        Reservation r = reservationRepo.findById(reservationId)</span>
+<span class="fc" id="L99">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Réservation introuvable.&quot;));</span>
+
+<span class="fc bfc" id="L101" title="All 2 branches covered.">        if (!r.getEtudiant().getId().equals(etudiantId)) {</span>
+<span class="fc" id="L102">            throw new UnauthorizedException(&quot;Vous ne pouvez annuler que vos propres réservations.&quot;);</span>
+        }
+
+<span class="pc bpc" id="L105" title="1 of 2 branches missed.">        if (r.getStatut() != StatutReservation.EN_ATTENTE</span>
+<span class="pc bpc" id="L106" title="1 of 2 branches missed.">            &amp;&amp; r.getStatut() != StatutReservation.CONFIRMEE) {</span>
+<span class="fc" id="L107">            throw new BusinessException(&quot;Cette réservation ne peut plus être annulée.&quot;);</span>
+        }
+
+<span class="nc" id="L110">        r.annuler();</span>
+<span class="nc" id="L111">        reservationRepo.save(r);</span>
+<span class="nc" id="L112">        log.info(&quot;Réservation annulée : {}&quot;, reservationId);</span>
+<span class="nc" id="L113">    }</span>
+
+    /**
+     * Passe à la réservation suivante dans la file FIFO.
+     * Appelé automatiquement via le Pattern Observer lors d'un retour.
+     *
+     * Logique FIFO :
+     *   1. Trouver la prochaine réservation EN_ATTENTE (triée par date)
+     *   2. Trouver un exemplaire disponible
+     *   3. Confirmer la réservation et réserver l'exemplaire
+     *   4. Notifier l'étudiant par email
+     *
+     * @param ouvrage l'ouvrage dont un exemplaire vient d'être libéré
+     */
+    @EventListener
+    public void onExemplaireRetourne(ExemplaireRetourneEvent event) {
+<span class="nc" id="L129">        Ouvrage ouvrage = event.getEmprunt().getExemplaire().getOuvrage();</span>
+<span class="nc" id="L130">        passerAuSuivant(ouvrage);</span>
+<span class="nc" id="L131">    }</span>
+
+    /**
+     * Trouve et notifie le prochain étudiant dans la file FIFO pour un ouvrage.
+     *
+     * @param ouvrage l'ouvrage rendu
+     */
+    public void passerAuSuivant(Ouvrage ouvrage) {
+<span class="nc" id="L139">        reservationRepo.findProchainEnAttenteByOuvrageId(ouvrage.getId())</span>
+<span class="nc" id="L140">            .ifPresent(prochaine -&gt; {</span>
+<span class="nc" id="L141">                Exemplaire exemplaire = ouvrage.getPremierExemplaireDisponible();</span>
+<span class="nc bnc" id="L142" title="All 2 branches missed.">                if (exemplaire != null) {</span>
+<span class="nc" id="L143">                    int delaiHeures = configService.getDureeReservationHeures();</span>
+<span class="nc" id="L144">                    prochaine.confirmer(delaiHeures);</span>
+<span class="nc" id="L145">                    reservationRepo.save(prochaine);</span>
+
+<span class="nc" id="L147">                    exemplaire.marquerReserve();</span>
+<span class="nc" id="L148">                    exemplaireRepo.save(exemplaire);</span>
+
+                    // Notifier l'étudiant
+<span class="nc" id="L151">                    notificationService.envoyerDisponibiliteReservation(prochaine);</span>
+<span class="nc" id="L152">                    log.info(&quot;File FIFO : réservation {} confirmée pour l'étudiant {}&quot;,</span>
+<span class="nc" id="L153">                        prochaine.getId(), prochaine.getEtudiant().getId());</span>
+                }
+<span class="nc" id="L155">            });</span>
+<span class="nc" id="L156">    }</span>
+
+    /**
+     * Retourne les réservations actives d'un étudiant.
+     *
+     * @param etudiantId identifiant de l'étudiant
+     * @return liste des réservations EN_ATTENTE ou CONFIRMEE
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Reservation&gt; getReservationsActives(Long etudiantId) {
+<span class="fc" id="L166">        return reservationRepo.findByEtudiantIdAndStatutIn(</span>
+            etudiantId,
+<span class="fc" id="L168">            List.of(StatutReservation.EN_ATTENTE, StatutReservation.CONFIRMEE)</span>
+        );
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

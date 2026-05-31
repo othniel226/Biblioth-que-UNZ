@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Penalite.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.model</a> &gt; <span class="el_source">Penalite.java</span></div><h1>Penalite.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.model;
+
+import jakarta.persistence.*;
+import lombok.*;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+/**
+ * Entité représentant une pénalité de retard.
+ *
+ * Cardinalité corrigée : un emprunt génère au MAXIMUM une pénalité (0..1).
+ * Le montant est calculé par le Pattern Strategy (PenaliteStrategy).
+ *
+ * Deux stratégies disponibles :
+ *   - TarifFixeStrategy   : montant fixe par jour (ex: 100 FCFA/jour)
+ *   - TarifProgressifStrategy : tarif qui augmente avec le nombre de jours
+ */
+@Entity
+@Table(name = &quot;penalites&quot;)
+<span class="pc" id="L20">@Getter @Setter @NoArgsConstructor @AllArgsConstructor</span>
+public class Penalite {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+<span class="nc" id="L25">    private Long id;</span>
+
+    /**
+     * Emprunt concerné par cette pénalité.
+     * Relation One-to-One (un emprunt → une pénalité maximum).
+     */
+    @OneToOne
+    @JoinColumn(name = &quot;emprunt_id&quot;, nullable = false, unique = true)
+<span class="fc" id="L33">    private Emprunt emprunt;</span>
+
+    /** Montant de la pénalité en FCFA */
+<span class="pc" id="L36">    @Column(nullable = false, precision = 10, scale = 2)</span>
+<span class="fc" id="L37">    private BigDecimal montant = BigDecimal.ZERO;</span>
+
+    /** Nombre de jours de retard ayant généré cette pénalité */
+<span class="pc" id="L40">    @Column(nullable = false)</span>
+<span class="pc" id="L41">    private Long joursRetard = 0L;</span>
+
+    /** Indique si la pénalité a été encaissée par le bibliothécaire */
+<span class="pc" id="L44">    @Column(nullable = false)</span>
+<span class="pc" id="L45">    private Boolean payee = false;</span>
+
+    /** Date et heure de création de la pénalité */
+<span class="pc" id="L48">    @Column(nullable = false)</span>
+<span class="pc" id="L49">    private LocalDateTime dateCreation = LocalDateTime.now();</span>
+
+    /** Date et heure d'encaissement (null si non payée) */
+    @Column
+<span class="fc" id="L53">    private LocalDateTime datePaiement;</span>
+
+    /** Nom de la stratégie utilisée pour le calcul (pour traçabilité) */
+    @Column(length = 50)
+<span class="fc" id="L57">    private String strategieUtilisee;</span>
+
+    /**
+     * Marque la pénalité comme payée et enregistre la date de paiement.
+     */
+    public void marquerPayee() {
+<span class="fc" id="L63">        this.payee = true;</span>
+<span class="fc" id="L64">        this.datePaiement = LocalDateTime.now();</span>
+<span class="fc" id="L65">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

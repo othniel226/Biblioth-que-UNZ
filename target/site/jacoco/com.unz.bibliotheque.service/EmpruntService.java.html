@@ -1,0 +1,262 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="fr"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EmpruntService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">Bibliothèque UNZ</a> &gt; <a href="index.source.html" class="el_package">com.unz.bibliotheque.service</a> &gt; <span class="el_source">EmpruntService.java</span></div><h1>EmpruntService.java</h1><pre class="source lang-java linenums">package com.unz.bibliotheque.service;
+
+import com.unz.bibliotheque.event.EmpruntCreeEvent;
+import com.unz.bibliotheque.event.EmpruntProlongeEvent;
+import com.unz.bibliotheque.event.ExemplaireRetourneEvent;
+import com.unz.bibliotheque.exception.BusinessException;
+import com.unz.bibliotheque.exception.ResourceNotFoundException;
+import com.unz.bibliotheque.model.*;
+import com.unz.bibliotheque.model.enums.StatutEmprunt;
+import com.unz.bibliotheque.pattern.strategy.PenaliteStrategy;
+import com.unz.bibliotheque.repository.*;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.*;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+
+/**
+ * Service métier principal pour la gestion des emprunts.
+ *
+ * Implémente les règles métier :
+ *   Règle 1 : Le compte étudiant doit être actif
+ *   Règle 2 : L'étudiant ne doit pas dépasser le quota (max 3 emprunts)
+ *   Règle 3 : L'étudiant ne doit pas avoir de pénalités impayées &gt;= seuil
+ *   Règle 4 : L'exemplaire doit être DISPONIBLE (verrou pessimiste)
+ *
+ * Design Patterns utilisés :
+ *   - Observer : publication d'événements Spring (EmpruntCreeEvent, etc.)
+ *   - Strategy : calcul de pénalités (PenaliteStrategy)
+ *   - Pessimistic Locking : verrou sur l'exemplaire pour éviter les doublons
+ */
+@Service
+@Transactional
+<span class="fc" id="L39">@RequiredArgsConstructor</span>
+<span class="fc" id="L40">@Slf4j</span>
+public class EmpruntService {
+
+    private final EmpruntRepository     empruntRepo;
+    private final EtudiantRepository    etudiantRepo;
+    private final ExemplaireRepository  exemplaireRepo;
+    private final PenaliteRepository    penaliteRepo;
+    private final ConfigurationService  configService;
+    private final NotificationService   notificationService;
+    private final ApplicationEventPublisher eventPublisher;
+
+    /** Strategy de calcul des pénalités (TarifFixeStrategy par @Primary) */
+    private final PenaliteStrategy penaliteStrategy;
+
+    // ══════════════════════════════════════════════════════
+    // CRÉER UN EMPRUNT (US-04 / US-10)
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Crée un nouvel emprunt après vérification de toutes les règles métier.
+     *
+     * @param etudiantId   identifiant de l'étudiant
+     * @param exemplaireId identifiant de l'exemplaire à emprunter
+     * @return l'emprunt créé et persisté
+     * @throws BusinessException         si une règle métier est violée
+     * @throws ResourceNotFoundException si l'étudiant ou l'exemplaire est introuvable
+     */
+    public Emprunt creerEmprunt(Long etudiantId, Long exemplaireId) {
+        // Récupérer l'étudiant
+<span class="fc" id="L69">        Etudiant etudiant = etudiantRepo.findById(etudiantId)</span>
+<span class="fc" id="L70">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Étudiant introuvable (id=&quot; + etudiantId + &quot;)&quot;));</span>
+
+        // Règle 1 : compte actif
+<span class="fc bfc" id="L73" title="All 2 branches covered.">        if (!etudiant.getActif()) {</span>
+<span class="fc" id="L74">            throw new BusinessException(&quot;Votre compte est désactivé. Contactez l'administrateur.&quot;);</span>
+        }
+
+        // Règle 2 : vérifier le quota d'emprunts
+<span class="fc" id="L78">        int maxEmprunts = configService.getMaxEmpruntsSimultanes();</span>
+<span class="fc" id="L79">        long nbEmpruntsActifs = empruntRepo.countEmpruntsActifsByEtudiant(etudiantId);</span>
+<span class="fc bfc" id="L80" title="All 2 branches covered.">        if (nbEmpruntsActifs &gt;= maxEmprunts) {</span>
+<span class="fc" id="L81">            throw new BusinessException(</span>
+                &quot;Quota d'emprunts atteint (&quot; + nbEmpruntsActifs + &quot;/&quot; + maxEmprunts + &quot;). &quot;
+                + &quot;Retournez un ouvrage avant d'en emprunter un nouveau.&quot;
+            );
+        }
+
+        // Règle 3 : vérifier les pénalités impayées
+<span class="fc" id="L88">        int seuilBlocage = configService.getSeuilBlocageFcfa();</span>
+<span class="fc" id="L89">        BigDecimal penalitesImpayees = penaliteRepo.sumMontantImpayeByEtudiantId(etudiantId);</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">        if (penalitesImpayees.compareTo(BigDecimal.valueOf(seuilBlocage)) &gt;= 0) {</span>
+<span class="fc" id="L91">            throw new BusinessException(</span>
+                &quot;Compte bloqué : &quot; + penalitesImpayees + &quot; FCFA de pénalités impayées. &quot;
+                + &quot;Réglez vos pénalités avant d'emprunter.&quot;
+            );
+        }
+
+        // Règle 4 : vérifier la disponibilité avec verrou pessimiste (Pattern Pessimistic Lock)
+<span class="fc" id="L98">        Exemplaire exemplaire = exemplaireRepo.findByIdWithLock(exemplaireId)</span>
+<span class="pc" id="L99">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Exemplaire introuvable (id=&quot; + exemplaireId + &quot;)&quot;));</span>
+
+<span class="nc bnc" id="L101" title="All 2 branches missed.">        if (!exemplaire.getStatut().name().equals(&quot;DISPONIBLE&quot;)) {</span>
+<span class="nc" id="L102">            throw new BusinessException(</span>
+<span class="nc" id="L103">                &quot;Cet exemplaire n'est pas disponible (statut : &quot; + exemplaire.getStatut() + &quot;).&quot;</span>
+            );
+        }
+
+        // Mettre à jour le statut de l'exemplaire
+<span class="nc" id="L108">        exemplaire.marquerEmprunte();</span>
+<span class="nc" id="L109">        exemplaireRepo.save(exemplaire);</span>
+
+        // Calculer la date de retour prévue
+<span class="nc" id="L112">        int dureeJours = configService.getDureeEmpruntJours();</span>
+<span class="nc" id="L113">        LocalDate dateRetour = LocalDate.now().plusDays(dureeJours);</span>
+
+        // Créer l'emprunt
+<span class="nc" id="L116">        Emprunt emprunt = new Emprunt();</span>
+<span class="nc" id="L117">        emprunt.setEtudiant(etudiant);</span>
+<span class="nc" id="L118">        emprunt.setExemplaire(exemplaire);</span>
+<span class="nc" id="L119">        emprunt.setDateEmprunt(LocalDateTime.now());</span>
+<span class="nc" id="L120">        emprunt.setDateRetourPrevu(dateRetour);</span>
+<span class="nc" id="L121">        emprunt.setStatut(StatutEmprunt.EN_COURS);</span>
+<span class="nc" id="L122">        emprunt.setProlonge(false);</span>
+
+<span class="nc" id="L124">        Emprunt empruntSauvegarde = empruntRepo.save(emprunt);</span>
+
+        // Pattern Observer : publier l'événement (NotificationService l'écoute)
+<span class="nc" id="L127">        eventPublisher.publishEvent(new EmpruntCreeEvent(this, empruntSauvegarde));</span>
+
+<span class="nc" id="L129">        log.info(&quot;Emprunt créé : étudiant={}, exemplaire={}, retour={}&quot;,</span>
+            etudiantId, exemplaireId, dateRetour);
+
+<span class="nc" id="L132">        return empruntSauvegarde;</span>
+    }
+
+    // ══════════════════════════════════════════════════════
+    // ENREGISTRER UN RETOUR (US-11) — BIBLIOTHÉCAIRE UNIQUEMENT
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Enregistre le retour d'un ouvrage et calcule la pénalité si retard.
+     * EXCLUSIVEMENT effectué par le bibliothécaire.
+     *
+     * @param empruntId identifiant de l'emprunt à clore
+     * @return l'emprunt mis à jour
+     * @throws ResourceNotFoundException si l'emprunt est introuvable
+     * @throws BusinessException         si l'emprunt est déjà rendu
+     */
+    public Emprunt enregistrerRetour(Long empruntId) {
+<span class="fc" id="L149">        Emprunt emprunt = empruntRepo.findById(empruntId)</span>
+<span class="fc" id="L150">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Emprunt introuvable (id=&quot; + empruntId + &quot;)&quot;));</span>
+
+<span class="pc bpc" id="L152" title="1 of 2 branches missed.">        if (emprunt.getStatut() == StatutEmprunt.RENDU) {</span>
+<span class="fc" id="L153">            throw new BusinessException(&quot;Cet emprunt a déjà été clôturé.&quot;);</span>
+        }
+
+        // Libérer l'exemplaire
+<span class="nc" id="L157">        Exemplaire exemplaire = emprunt.getExemplaire();</span>
+<span class="nc" id="L158">        exemplaire.marquerDisponible();</span>
+<span class="nc" id="L159">        exemplaireRepo.save(exemplaire);</span>
+
+        // Clore l'emprunt
+<span class="nc" id="L162">        emprunt.clore(LocalDate.now());</span>
+
+        // Calculer la pénalité si retard (Pattern Strategy)
+<span class="nc bnc" id="L165" title="All 4 branches missed.">        if (emprunt.estEnRetard() || emprunt.getNombreJoursRetard() &gt; 0) {</span>
+<span class="nc" id="L166">            BigDecimal montant = penaliteStrategy.calculer(emprunt);</span>
+<span class="nc bnc" id="L167" title="All 2 branches missed.">            if (montant.compareTo(BigDecimal.ZERO) &gt; 0) {</span>
+<span class="nc" id="L168">                Penalite penalite = new Penalite();</span>
+<span class="nc" id="L169">                penalite.setEmprunt(emprunt);</span>
+<span class="nc" id="L170">                penalite.setMontant(montant);</span>
+<span class="nc" id="L171">                penalite.setJoursRetard(emprunt.getNombreJoursRetard());</span>
+<span class="nc" id="L172">                penalite.setStrategieUtilisee(penaliteStrategy.getDescription());</span>
+<span class="nc" id="L173">                penaliteRepo.save(penalite);</span>
+<span class="nc" id="L174">                log.info(&quot;Pénalité calculée : {} FCFA pour {} jours de retard&quot;,</span>
+<span class="nc" id="L175">                    montant, emprunt.getNombreJoursRetard());</span>
+            }
+        }
+
+<span class="nc" id="L179">        Emprunt empruntMisAJour = empruntRepo.save(emprunt);</span>
+
+        // Pattern Observer : notifier le prochain dans la file FIFO
+<span class="nc" id="L182">        eventPublisher.publishEvent(new ExemplaireRetourneEvent(this, empruntMisAJour));</span>
+
+<span class="nc" id="L184">        log.info(&quot;Retour enregistré : empruntId={}&quot;, empruntId);</span>
+<span class="nc" id="L185">        return empruntMisAJour;</span>
+    }
+
+    // ══════════════════════════════════════════════════════
+    // PROLONGER UN EMPRUNT (US-06)
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Prolonge un emprunt d'une durée supplémentaire.
+     * Une seule prolongation est autorisée par emprunt.
+     *
+     * @param empruntId  identifiant de l'emprunt
+     * @param etudiantId identifiant de l'étudiant demandeur (vérification)
+     * @return l'emprunt prolongé
+     * @throws BusinessException si la prolongation n'est pas autorisée
+     */
+    public Emprunt prolongerEmprunt(Long empruntId, Long etudiantId) {
+<span class="fc" id="L202">        Emprunt emprunt = empruntRepo.findById(empruntId)</span>
+<span class="fc" id="L203">            .orElseThrow(() -&gt; new ResourceNotFoundException(&quot;Emprunt introuvable.&quot;));</span>
+
+        // Vérifier que l'emprunt appartient à l'étudiant
+<span class="fc bfc" id="L206" title="All 2 branches covered.">        if (!emprunt.getEtudiant().getId().equals(etudiantId)) {</span>
+<span class="fc" id="L207">            throw new BusinessException(&quot;Cet emprunt ne vous appartient pas.&quot;);</span>
+        }
+
+        // Vérifier si déjà prolongé
+<span class="pc bpc" id="L211" title="1 of 2 branches missed.">        if (emprunt.getProlonge()) {</span>
+<span class="fc" id="L212">            throw new BusinessException(&quot;Cet emprunt a déjà été prolongé. Une seule prolongation est autorisée.&quot;);</span>
+        }
+
+        // Vérifier si l'emprunt est en retard
+<span class="nc bnc" id="L216" title="All 2 branches missed.">        if (emprunt.estEnRetard()) {</span>
+<span class="nc" id="L217">            throw new BusinessException(&quot;Impossible de prolonger un emprunt en retard.&quot;);</span>
+        }
+
+        // Calculer la nouvelle date de retour
+<span class="nc" id="L221">        int dureeJours = configService.getDureeEmpruntJours();</span>
+<span class="nc" id="L222">        emprunt.setDateRetourPrevu(emprunt.getDateRetourPrevu().plusDays(dureeJours));</span>
+<span class="nc" id="L223">        emprunt.setProlonge(true);</span>
+<span class="nc" id="L224">        emprunt.setStatut(StatutEmprunt.PROLONGE);</span>
+
+<span class="nc" id="L226">        Emprunt empruntProlonge = empruntRepo.save(emprunt);</span>
+
+        // Pattern Observer : notification de prolongation
+<span class="nc" id="L229">        eventPublisher.publishEvent(new EmpruntProlongeEvent(this, empruntProlonge));</span>
+
+<span class="nc" id="L231">        log.info(&quot;Emprunt prolongé : empruntId={}, nouvelle date={}&quot;, empruntId, emprunt.getDateRetourPrevu());</span>
+<span class="nc" id="L232">        return empruntProlonge;</span>
+    }
+
+    // ══════════════════════════════════════════════════════
+    // LECTURES
+    // ══════════════════════════════════════════════════════
+
+    /**
+     * Retourne les emprunts actifs d'un étudiant.
+     *
+     * @param etudiantId identifiant de l'étudiant
+     * @return liste des emprunts EN_COURS, EN_RETARD ou PROLONGE
+     */
+    @Transactional(readOnly = true)
+    public List&lt;Emprunt&gt; getEmpruntsEnCours(Long etudiantId) {
+<span class="fc" id="L247">        return empruntRepo.findEmpruntsActifsByEtudiant(etudiantId);</span>
+    }
+
+    /**
+     * Retourne l'historique paginé des emprunts d'un étudiant.
+     *
+     * @param etudiantId identifiant de l'étudiant
+     * @param pageable   paramètres de pagination
+     * @return page d'emprunts
+     */
+    @Transactional(readOnly = true)
+    public Page&lt;Emprunt&gt; getHistoriqueEtudiant(Long etudiantId, Pageable pageable) {
+<span class="fc" id="L259">        return empruntRepo.findHistoriqueByEtudiant(etudiantId, pageable);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.11.202310140853</span></div></body></html>

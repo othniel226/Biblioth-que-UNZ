@@ -1,0 +1,76 @@
+spring:
+  application:
+    name: bibliotheque-unz
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 5
+      minimum-idle: 1
+      connection-timeout: 30000
+      pool-name: BiblioHikariPool
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 20
+  thymeleaf:
+    encoding: UTF-8
+    mode: HTML
+    cache: false
+    prefix: classpath:/templates/
+    suffix: .html
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: bibliotheque.unz@gmail.com
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.starttls.required: true
+    default-encoding: UTF-8
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+app:
+  jwt:
+    secret: bibliothequeUNZCleSuperSecreteChangerEnProd2026!!
+    expiration-ms: 86400000
+  base-url: ${APP_BASE_URL:https://biblioth-que-unz.onrender.com}
+  bibliotheque:
+    penalite-par-jour-fcfa: 100
+
+server:
+  port: ${PORT:8080}
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  error:
+    include-message: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    display-request-duration: true
+  api-docs:
+    path: /api-docs
+
+logging:
+  level:
+    com.unz.bibliotheque: INFO
+    org.springframework.security: INFO
+    org.hibernate.SQL: INFO
+  pattern:
+    console: "%d{dd/MM/yyyy HH:mm:ss} [%thread] %-5level %logger{30} - %msg%n"
