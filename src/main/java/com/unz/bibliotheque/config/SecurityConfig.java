@@ -94,6 +94,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
             // Désactiver CSRF (non nécessaire avec JWT stateless)
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
 
             // Règles d'autorisation par URL
@@ -125,13 +126,7 @@ public class SecurityConfig {
             )
 
             // Configuration du formulaire de connexion Thymeleaf
-            .formLogin(form -> form
-                .loginPage("/auth/login")                // Page de connexion personnalisée
-                .loginProcessingUrl("/auth/login")       // URL de traitement du formulaire
-                .defaultSuccessUrl("/dashboard", true)   // Redirection après connexion réussie
-                .failureUrl("/auth/login?error=true")    // Redirection en cas d'erreur
-                .permitAll()
-            )
+            .formLogin(form -> form.disable())
 
             // Configuration de la déconnexion
             .logout(logout -> logout
@@ -152,5 +147,20 @@ public class SecurityConfig {
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+    @Bean 
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config  = new CorsConfiguration();
+        config.setAllowedOrigins(Arrays.asList(
+            "https://biblioth-que-unz-frontend.onrender.com",
+            "https://localhost:3000",
+            "https://localhost:5500"
+            ));
+         config.setAllowedMethods(Arrays.asList("GET","POST","PUT","DELETE","OPTIONS"));
+         config.setAllowedHeaders(Arrays.asList("*"));
+         config.setAllowCredentials(true);
+        UrlBasedCorsConfigurationSource source = new  UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**",config);
+        return source;
     }
 }
