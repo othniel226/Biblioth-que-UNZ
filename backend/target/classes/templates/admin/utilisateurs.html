@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Utilisateurs — Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<<nav class="navbar navbar-dark bg-dark">
+    <div class="container">
+        <a href="/admin/tableau-de-bord" class="navbar-brand">← Administration</a>
+        <a href="/auth/logout" class="btn btn-outline-light btn-sm">Déconnexion</a>
+    </div>
+</nav>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">
+            <i class="fas fa-users me-2 text-primary"></i>Gestion des utilisateurs
+        </h4>
+        <a href="/admin/utilisateurs/creer" class="btn btn-primary">
+            <i class="fas fa-user-plus me-2"></i>Nouvel utilisateur
+        </a>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            <table class="table table-hover">
+                <thead><tr><th>Nom</th><th>Email</th><th>Rôle</th><th>Statut</th><th>Actions</th></tr></thead>
+                <tbody>
+                    <tr th:each="u : ${utilisateurs.content}">
+                        <td th:text="${u.prenom + ' ' + u.nom}"></td>
+                        <td th:text="${u.email}"></td>
+                        <td th:text="${u.role}"></td>
+                        <td><span th:class="${u.actif} ? 'badge bg-success' : 'badge bg-danger'" th:text="${u.actif} ? 'Actif' : 'Inactif'"></span></td>
+                        <td>
+                            <form th:if="${!u.actif}" th:action="@{/admin/utilisateurs/{id}/activer(id=${u.id})}" method="post" class="d-inline">
+                                <button class="btn btn-success btn-sm">Activer</button>
+                            </form>
+                            <form th:if="${u.actif}" th:action="@{/admin/utilisateurs/{id}/desactiver(id=${u.id})}" method="post" class="d-inline">
+                                <button class="btn btn-danger btn-sm">Désactiver</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

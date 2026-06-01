@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapports — Admin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body { background: #f0f2f5; }
+        .navbar { background: linear-gradient(135deg,#212121,#424242) !important; }
+        .stat-card { border-radius: 12px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .stat-number { font-size: 2rem; font-weight: 800; }
+        .chart-card { border-radius: 12px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .export-btn { border-radius: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="container">
+        <a href="/admin/tableau-de-bord" class="navbar-brand fw-bold">
+            <i class="fas fa-arrow-left me-2"></i>Administration
+        </a>
+        <a th:href="@{/auth/logout}" class="btn btn-outline-light btn-sm">Déconnexion</a>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4 class="fw-bold mb-0">
+            <i class="fas fa-chart-bar me-2 text-primary"></i>Rapports &amp; Statistiques
+        </h4>
+        <!-- Boutons d'export -->
+        <div class="d-flex gap-2">
+            <a href="/admin/rapports/export/pdf" class="btn btn-danger export-btn">
+                <i class="fas fa-file-pdf me-2"></i>Exporter PDF
+            </a>
+            <a href="/admin/rapports/export/excel" class="btn btn-success export-btn">
+                <i class="fas fa-file-excel me-2"></i>Exporter Excel
+            </a>
+            <a href="/admin/rapports/export/word" class="btn btn-primary export-btn">
+                <i class="fas fa-file-word me-2"></i>Exporter Word
+            </a>
+        </div>
+    </div>
+
+    <!-- Messages flash -->
+    <div th:if="${success}" class="alert alert-success" th:text="${success}"></div>
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+
+    <!-- Statistiques clés -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card stat-card text-center p-3">
+                <div class="stat-number text-primary" th:text="${nbEmpruntsTotal}">0</div>
+                <div class="text-muted small">Emprunts total</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card text-center p-3">
+                <div class="stat-number text-success" th:text="${nbEmpruntsEnCours}">0</div>
+                <div class="text-muted small">En cours</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card text-center p-3">
+                <div class="stat-number text-danger" th:text="${nbEmpruntsEnRetard}">0</div>
+                <div class="text-muted small">En retard</div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card stat-card text-center p-3">
+                <div class="stat-number text-info" th:text="${nbOuvrages}">0</div>
+                <div class="text-muted small">Ouvrages</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphiques -->
+    <div class="row g-4 mb-4">
+        <!-- Graphique emprunts par statut (barres bleues) -->
+        <div class="col-md-6">
+            <div class="card chart-card p-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-chart-bar me-2 text-primary"></i>
+                    Emprunts par statut
+                </h6>
+                <canvas id="chartEmprunts" height="200"></canvas>
+            </div>
+        </div>
+
+        <!-- Graphique réservations (courbe verte) -->
+        <div class="col-md-6">
+            <div class="card chart-card p-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-chart-line me-2 text-success"></i>
+                    Réservations &amp; Retards
+                </h6>
+                <canvas id="chartReservations" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Graphique circulaire -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card chart-card p-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-chart-pie me-2 text-warning"></i>
+                    Répartition des emprunts
+                </h6>
+                <div style="max-width:300px; margin:auto;">
+                    <canvas id="chartPie" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Top ouvrages -->
+        <div class="col-md-6">
+            <div class="card chart-card p-4">
+                <h6 class="fw-bold mb-3">
+                    <i class="fas fa-trophy me-2 text-warning"></i>
+                    Top 5 ouvrages les plus empruntés
+                </h6>
+                <div th:if="${topOuvrages != null and !#lists.isEmpty(topOuvrages)}">
+                    <div th:each="ouvrage, stat : ${topOuvrages}" class="d-flex justify-content-between align-items-center py-2 border-bottom">
+                        <div>
+                            <span class="badge bg-primary me-2" th:text="${stat.index + 1}"></span>
+                            <span class="fw-semibold small" th:text="${ouvrage.titre}"></span>
+                        </div>
+                        <span class="text-muted small" th:text="${ouvrage.auteur}"></span>
+                    </div>
+                </div>
+                <div th:if="${topOuvrages == null or #lists.isEmpty(topOuvrages)}" class="text-center text-muted py-3">
+                    Aucune donnée disponible
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:inline="javascript">
+    // Données du serveur via Thymeleaf
+    const nbEnCours  = [[${nbEmpruntsEnCours}]]  || 0;
+    const nbEnRetard = [[${nbEmpruntsEnRetard}]] || 0;
+    const nbTotal    = [[${nbEmpruntsTotal}]]     || 0;
+    const nbRendus   = nbTotal - nbEnCours - nbEnRetard;
+
+    // Couleurs
+    const bleu   = 'rgba(25, 118, 210, 0.8)';
+    const vert   = 'rgba(46, 125, 50, 0.8)';
+    const rouge  = 'rgba(198, 40, 40, 0.8)';
+    const orange = 'rgba(245, 124, 0, 0.8)';
+
+    // Graphique 1 — Emprunts par statut (barres bleues)
+    new Chart(document.getElementById('chartEmprunts'), {
+        type: 'bar',
+        data: {
+            labels: ['En cours', 'En retard', 'Rendus', 'Total'],
+            datasets: [{
+                label: 'Nombre d\'emprunts',
+                data: [nbEnCours, nbEnRetard, nbRendus, nbTotal],
+                backgroundColor: [bleu, rouge, vert, orange],
+                borderRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Graphique 2 — Réservations et retards (courbe verte)
+    new Chart(document.getElementById('chartReservations'), {
+        type: 'line',
+        data: {
+            labels: ['Semaine 1', 'Semaine 2', 'Semaine 3', 'Semaine 4'],
+            datasets: [
+                {
+                    label: 'Réservations',
+                    data: [2, 4, 3, 5],
+                    borderColor: vert,
+                    backgroundColor: 'rgba(46, 125, 50, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: 'Retards',
+                    data: [1, 1, 2, nbEnRetard],
+                    borderColor: rouge,
+                    backgroundColor: 'rgba(198, 40, 40, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+    });
+
+    // Graphique 3 — Répartition (camembert)
+    new Chart(document.getElementById('chartPie'), {
+        type: 'doughnut',
+        data: {
+            labels: ['En cours', 'En retard', 'Rendus'],
+            datasets: [{
+                data: [nbEnCours, nbEnRetard, Math.max(0, nbRendus)],
+                backgroundColor: [bleu, rouge, vert],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+</script>
+</body>
+</html>

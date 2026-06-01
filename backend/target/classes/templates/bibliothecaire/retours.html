@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retour d'ouvrages — Bibliothécaire</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { background: #f0f2f5; }
+        .navbar { background: linear-gradient(135deg,#0d47a1,#1565c0) !important; }
+        .scanner-zone {
+            border: 3px dashed #1565c0;
+            border-radius: 16px;
+            background: #f5f9ff;
+            transition: all 0.3s;
+        }
+        .scanner-zone:focus-within {
+            border-color: #0d47a1;
+            background: #e3f2fd;
+            box-shadow: 0 0 0 4px rgba(13,71,161,0.1);
+        }
+        .return-card { border-radius: 12px; border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .penalty-alert { background: #fff3e0; border-left: 4px solid #f57f17; }
+        .success-return { background: #e8f5e9; border-left: 4px solid #2e7d32; }
+        .book-icon { width: 60px; height: 60px; background: linear-gradient(135deg,#e8eaf6,#c5cae9); border-radius: 12px; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-dark navbar-expand-lg">
+    <div class="container">
+        <span class="navbar-brand fw-bold"><i class="fas fa-book-open me-2"></i>Bibliothèque UNZ — Bibliothécaire</span>
+        <div class="d-flex gap-2">
+            <a href="/bibliothecaire/tableau-de-bord" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-tachometer-alt me-1"></i>Tableau de bord
+            </a>
+            <a href="/bibliothecaire/penalites" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-coins me-1"></i>Pénalités
+            </a>
+            <a th:href="@{/auth/logout}" class="btn btn-outline-light btn-sm">
+                <i class="fas fa-sign-out-alt"></i>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="text-center mb-4">
+                <h4 class="fw-bold"><i class="fas fa-undo me-2 text-warning"></i>Retour d'ouvrage</h4>
+                <p class="text-muted">Scannez le code-barres de l'exemplaire retourné</p>
+            </div>
+
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle me-2"></i><span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Zone de scan -->
+            <div class="scanner-zone p-4 mb-4 text-center">
+                <i class="fas fa-barcode fa-3x text-primary mb-3 opacity-50"></i>
+                <form th:action="@{/bibliothecaire/retours}" method="post" class="mt-2">
+                    <div class="input-group input-group-lg">
+                        <input type="text" name="codeBarres"
+                               class="form-control text-center"
+                               placeholder="EX-XXX-XXX"
+                               style="font-size:1.3rem; letter-spacing:3px; text-transform:uppercase;"
+                               required autofocus autocomplete="off">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                <p class="text-muted small mt-2 mb-0">Entrez le code-barres et appuyez sur Entrée</p>
+            </div>
+
+            <!-- Résultat de la recherche -->
+            <div th:if="${emprunt != null}" class="return-card card mb-4">
+                <div class="card-body p-4">
+                    <div class="d-flex gap-3 align-items-start mb-3">
+                        <div class="book-icon flex-shrink-0">
+                            <i class="fas fa-book fa-2x text-primary opacity-50"></i>
+                        </div>
+                        <div class="flex-fill">
+                            <h6 class="fw-bold mb-1"
+                                th:text="${emprunt.exemplaire?.ouvrage?.titre ?: '—'}">Titre</h6>
+                            <p class="text-muted small mb-1"
+                               th:text="${emprunt.exemplaire?.ouvrage?.auteur ?: ''}">Auteur</p>
+                            <p class="text-muted small mb-0 font-monospace"
+                               th:text="${emprunt.exemplaire?.codeBarres ?: '—'}"></p>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <div class="row g-2 small mb-3">
+                        <div class="col-6">
+                            <span class="text-muted">Étudiant :</span>
+                            <span class="fw-semibold" th:text="${emprunt.etudiant?.nomComplet ?: '—'}"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Matricule :</span>
+                            <span class="fw-semibold" th:text="${emprunt.etudiant?.matricule ?: ''}"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Emprunté le :</span>
+                            <span class="fw-semibold" th:text="${emprunt.dateEmprunt}"></span>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted">Retour prévu :</span>
+                            <span class="fw-semibold"
+                                  th:classappend="${emprunt.estEnRetard()} ? 'text-danger' : ''"
+                                  th:text="${emprunt.dateRetourPrevu}"></span>
+                        </div>
+                    </div>
+
+                    <!-- Pénalité si retard -->
+                    <div th:if="${emprunt.estEnRetard()}" class="penalty-alert p-3 rounded-3 mb-3">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <i class="fas fa-coins text-warning fa-lg"></i>
+                            <span class="fw-bold">Pénalité de retard</span>
+                        </div>
+                        <p class="mb-1">
+                            <span th:text="${emprunt.getNombreJoursRetard()}"></span> jour(s) de retard
+                            → pénalité calculée automatiquement à la validation
+                        </p>
+                    </div>
+
+                    <div th:unless="${emprunt.estEnRetard()}" class="success-return p-3 rounded-3 mb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-check-circle text-success fa-lg"></i>
+                            <span class="fw-bold text-success">Retour dans les délais</span>
+                        </div>
+                        <p class="text-muted small mb-0 mt-1">Aucune pénalité ne sera appliquée.</p>
+                    </div>
+
+                    <!-- Bouton valider -->
+                    <form th:action="@{/bibliothecaire/retours/valider}" method="post" class="d-grid">
+                        <input type="hidden" name="empruntId" th:value="${emprunt.id}">
+                        <button type="submit" class="btn btn-success btn-lg">
+                            <i class="fas fa-check-circle me-2"></i>Confirmer le retour
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Derniers retours -->
+            <div class="return-card card">
+                <div class="card-header bg-white border-0 pt-3 pb-0">
+                    <h6 class="fw-bold mb-0">
+                        <i class="fas fa-history me-2 text-primary"></i>Derniers retours
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Ouvrage</th>
+                                    <th>Étudiant</th>
+                                    <th>Retourné le</th>
+                                    <th class="pe-3 text-end">Pénalité</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:if="${#lists.isEmpty(derniersRetours)}">
+                                    <td colspan="4" class="text-center text-muted py-3 small">
+                                        Aucun retour récent
+                                    </td>
+                                </tr>
+                                <tr th:each="retour : ${derniersRetours}">
+                                    <td class="ps-3 small">
+                                        <div class="fw-semibold"
+                                             th:text="${retour.exemplaire?.ouvrage?.titre ?: '—'}"></div>
+                                        <div class="text-muted" style="font-size:10px;"
+                                             th:text="${retour.exemplaire?.codeBarres ?: ''}"></div>
+                                    </td>
+                                    <td class="small"
+                                        th:text="${retour.etudiant?.nomComplet ?: '—'}"></td>
+                                    <td class="small" th:text="${retour.dateRetourReel}"></td>
+                                    <td class="pe-3 text-end">
+                                        <span th:if="${retour.penalite?.montant != null and retour.penalite.montant > 0}"
+                                              class="badge bg-danger"
+                                              th:text="${retour.penalite.montant + ' FCFA'}"></span>
+                                        <span th:unless="${retour.penalite?.montant != null and retour.penalite.montant > 0}"
+                                              class="badge bg-success">0 FCFA</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        var input = document.querySelector('input[name="codeBarres"]');
+        if (input) input.focus();
+    });
+</script>
+</body>
+</html>
