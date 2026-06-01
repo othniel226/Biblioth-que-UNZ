@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
  * Ce contrôleur se contente d'afficher les pages Thymeleaf.
  */
 @Controller
-@RequestMapping("/auth")
+@RequestMapping("api/auth")
 public class AuthController {
 
     /**
